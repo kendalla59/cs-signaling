@@ -1,0 +1,2 @@
+#define cs_signaling_VERSION_MAJOR @cs_signaling_VERSION_MAJOR@
+#define cs_signaling_VERSION_MINOR @cs_signaling_VERSION_MINOR@
