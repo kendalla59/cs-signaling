@@ -7,6 +7,7 @@
 #include "edge.h"
 #include "node.h"
 #include "rrsignal.h"
+#include "train.h"
 #include <iostream>
 #include <sstream>
 #include <iomanip>
@@ -234,6 +235,14 @@ void Edge::show(eEnd showEnd)
             if (edge.eeEdge) { msg += edge.eeEdge->name(); }
             else { msg += "<block>"; }
             break;
+        }
+    }
+    if (m_train) {
+        if (m_train->getPosition().eeEnd == eEndA) {
+            msg += "  /[o==o]-[o==o]";
+        }
+        else {
+            msg += "  [o==o]-[o==o]\\";
         }
     }
     std::cout << msg << std::endl;
