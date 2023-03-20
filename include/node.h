@@ -66,6 +66,11 @@ public:
     const std::string& name() { return m_name; }
 
     eJSwitch getSwitchPos() { return m_switchState; }
+    void setSwitchPos(eJSwitch jsw) { m_switchState = jsw; }
+    void toggleSwitchPos() {
+        m_switchState = (m_switchState == eSwitchLeft) ? eSwitchRight
+                                                       : eSwitchLeft;
+    }
 
     void show();
 

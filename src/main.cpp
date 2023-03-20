@@ -7,17 +7,21 @@
 
 #include "node.h"
 #include "edge.h"
+#include "train.h"
 #include "config.h"
 #include <iostream>
 #include <sstream>
 #include <iomanip>
 #include <map>
+#include <vector>
 
 using rrsim::Node;
 using rrsim::Edge;
+using rrsim::Train;
 using rrsim::g_nodeMap;
 using rrsim::g_edgeMap;
 
+Train g_train;
 
 static std::string enterName()
 {
@@ -96,30 +100,124 @@ static int cmdConnectSegments()
 
     try {
         iter1->second->connectEdge(end1, iter2->second, end2);
+        iter1->second->show(end1);
     }
     catch(std::exception& ex) {
         std::cout << "ERROR: " << ex.what() << std::endl;
         return EBUSY;
     }
-    iter1->second->show(end1);
     return 0;
+}
+
+static int cmdToggleSwitch()
+{
+    std::vector<Node *> junctions;
+    for (auto it: g_nodeMap) {
+        if (it.second->getNodeType() == rrsim::eJunction) {
+            junctions.push_back(it.second);
+        }
+    }
+    if (junctions.empty()) {
+        std::cout << ">>> There are no junctions in the track network <<<"
+                  << std::endl;
+        return 0;
+    }
+    int jnum = 0;
+    for (auto it: junctions) {
+        std::cout << ++jnum << ": " << it->name() << std::endl;
+    }
+    std::cout << "Enter junction (1.." << jnum << "): ";
+    std::string numstr;
+    std::getline(std::cin, numstr);
+    if (numstr.empty()) {
+        std::cout << "No entry, quitting function..." << std::endl;
+        return 0;
+    }
+    int val = std::atoi(numstr.c_str());
+    if ((val < 1) || (val > jnum)) {
+        std::cout << "No such junction" << std::endl;
+        return EINVAL;
+    }
+    val--; // Make the index zero based.
+    junctions[val]->toggleSwitchPos();
+    std::cout << junctions[val]->name() << ": junction switch is ";
+    rrsim::eJSwitch jsw = junctions[val]->getSwitchPos();
+    std::cout << ((jsw == rrsim::eSwitchLeft) ? "LEFT" : "RIGHT" ) << std::endl;
+    return 0;
+
 }
 
 static int cmdListSegments()
 {
-    for (auto it: g_edgeMap) {
-        it.second->show();
+    try {
+        for (auto it: g_edgeMap) {
+            it.second->show();
+        }
+        std::cout << std::endl;
+        std::cout << "TOTAL: " << g_edgeMap.size() << " track segments" << std::endl;
     }
-    std::cout << std::endl;
-    std::cout << "TOTAL: " << g_edgeMap.size() << " track segments" << std::endl;
+    catch (std::exception& ex) {
+        std::cout << "ERROR: " << ex.what() << std::endl;
+        return EFAULT;
+    }
     return 0;
 }
 
 static int cmdShowConnections()
 {
-    for (auto it: g_nodeMap) {
-        it.second->show();
+    try {
+        for (auto it: g_nodeMap) {
+            it.second->show();
+        }
     }
+    catch (std::exception& ex) {
+        std::cout << "ERROR: " << ex.what() << std::endl;
+        return EFAULT;
+    }
+    return 0;
+}
+
+static int cmdPlaceTrain()
+{
+    std::string resp1 = enterName();
+    if (resp1.empty()) { return 0; }
+    auto iter1 = g_edgeMap.find(resp1);
+    if (iter1 == g_edgeMap.end()) {
+        resp1 = nameFromNumber(resp1);
+        iter1 = g_edgeMap.find(resp1);
+        if (iter1 == g_edgeMap.end()) {
+            std::cout << "No such segment \"" << resp1 << "\"" << std::endl;
+            return EINVAL;
+        }
+    }
+    rrsim::eEnd end1 = enterAorB();
+
+    try {
+        g_train.placeOnTrack(resp1, end1);
+        g_train.show();
+    }
+    catch (std::exception& ex) {
+        std::cout << "ERROR: " << ex.what() << std::endl;
+        return EFAULT;
+    }
+
+    return 0;
+}
+
+static int cmdStepSimulation()
+{
+    try {
+        bool chk = g_train.stepSimulation();
+        g_train.show();
+        if (!chk) {
+            std::cout << ">>> The Simulation Is Complete <<<" << std::endl;
+        }
+    }
+    catch (std::exception& ex) {
+        std::cout << "ERROR: " << ex.what() << std::endl;
+        return EFAULT;
+    }
+
     return 0;
 }
 
@@ -131,9 +229,12 @@ int runCommand()
             "Train Signaling System Simulator"              << std::endl <<
             "1. Add a track segment"                        << std::endl <<
             "2. Connect track segments"                     << std::endl <<
-            "3. List track segments"                        << std::endl <<
-            "4. Show track connections"                     << std::endl <<
-            "5. Run smoke test"                             << std::endl <<
+            "3. Toggle Junction Switch"                     << std::endl <<
+            "4. List track segments"                        << std::endl <<
+            "5. Show track connections"                     << std::endl <<
+            "6. Place train on a track segment"             << std::endl <<
+            "7. Step the train simulation"                  << std::endl <<
+            "8. Run smoke test"                             << std::endl <<
             "Q/quit/exit"                                   << std::endl;
 
     std::string resp;
@@ -159,16 +260,31 @@ int runCommand()
         std::cout << "----------------------------------------------------" << std::endl;
         break;
     case 3:
+        std::cout << "-------------- Toggle Junction Switch --------------" << std::endl;
+        rc = cmdToggleSwitch();
+        std::cout << "----------------------------------------------------" << std::endl;
+        break;
+    case 4:
         std::cout << "--------------- List Track Segments ----------------" << std::endl;
         rc = cmdListSegments();
         std::cout << "----------------------------------------------------" << std::endl;
         break;
-    case 4:
+    case 5:
         std::cout << "----------------- Show Connections -----------------" << std::endl;
         rc = cmdShowConnections();
         std::cout << "----------------------------------------------------" << std::endl;
         break;
-    case 5:
+    case 6:
+        std::cout << "--------------- Place Train On Track ---------------" << std::endl;
+        rc = cmdPlaceTrain();
+        std::cout << "----------------------------------------------------" << std::endl;
+        break;
+    case 7:
+        std::cout << "----------------- Step Simulation ------------------" << std::endl;
+        rc = cmdStepSimulation();
+        std::cout << "----------------------------------------------------" << std::endl;
+        break;
+    case 8:
         std::cout << "------------------ Run Smoke Test ------------------" << std::endl;
         rc = cmdSmokeTest();
         std::cout << "----------------------------------------------------" << std::endl;
