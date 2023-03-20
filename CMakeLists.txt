@@ -6,7 +6,9 @@ project (cs_signaling
 	DESCRIPTION "Railroad signaling case study")
 
 include_directories(include)
-set (SRC src/main.cpp)
+set (SRC src/main.cpp
+         src/edge.cpp
+         src/node.cpp)
 
 # This project will output an executable file
 add_executable(${PROJECT_NAME} ${SRC})
