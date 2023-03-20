@@ -9,6 +9,7 @@ include_directories(include)
 set (SRC src/main.cpp
          src/edge.cpp
          src/node.cpp
+         src/rrsignal.cpp
          src/train.cpp)
 
 # This project will output an executable file

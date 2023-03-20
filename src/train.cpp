@@ -7,6 +7,7 @@
 #include "train.h"
 #include "edge.h"
 #include "node.h"
+#include "rrsignal.h"
 #include <iostream>
 
 namespace rrsim {
@@ -32,6 +33,11 @@ void Train::placeOnTrack(const std::string& trackName, eEnd direction)
     if (iter == g_edgeMap.end()) {
         throw std::runtime_error("No such track segment: " + trackName);
     }
+    if (iter->second->getTrain()) {
+        throw std::runtime_error("A train is already on segment: " + trackName);
+    }
+    iter->second->setTrain(this);
+
     m_edge.eeEdge = iter->second;
     m_edge.eeEnd = direction;
 }
@@ -44,7 +50,10 @@ bool Train::stepSimulation()
     EdgeEnd next;
     eJSwitch jsw;
 
-    // TODO: check signal
+    // Do not advance the train if the signal is red.
+    RRsignal * light = m_edge.eeEdge->getSignal(m_edge.eeEnd);
+    if (light && light->signalIsRed()) { return true; }
+
     NodeSlot node = m_edge.eeEdge->getNode(m_edge.eeEnd);
     switch (node.nsNode->getNodeType()) {
     default:
@@ -54,8 +63,16 @@ bool Train::stepSimulation()
     case eContinuation:
         next = node.nsNode->getEdgeEnd(
                 (node.nsSlot == eSlot1) ? eSlot2 : eSlot1);
-        m_edge.eeEdge = next.eeEdge;
-        m_edge.eeEnd = (next.eeEnd == eEndA) ? eEndB : eEndA;
+        if (next.eeEdge) {
+            m_edge.eeEdge->setTrain(nullptr);
+            if (next.eeEdge->getTrain()) {
+                m_edge.eeEdge = nullptr;
+                throw std::runtime_error("Train collision detected!");
+            }
+            m_edge.eeEdge = next.eeEdge;
+            m_edge.eeEnd = (next.eeEnd == eEndA) ? eEndB : eEndA;
+            m_edge.eeEdge->setTrain(this);
+        }
         break;
 
     case eJunction:
@@ -64,18 +81,42 @@ bool Train::stepSimulation()
             if (node.nsSlot == eSlot1) {
                 next = node.nsNode->getEdgeEnd(
                         (jsw == eSwitchLeft) ? eSlot2 : eSlot3);
-                m_edge.eeEdge = next.eeEdge;
-                m_edge.eeEnd = (next.eeEnd == eEndA) ? eEndB : eEndA;
+                if (next.eeEdge) {
+                    m_edge.eeEdge->setTrain(nullptr);
+                    if (next.eeEdge->getTrain()) {
+                        m_edge.eeEdge = nullptr;
+                        throw std::runtime_error("Train collision detected!");
+                    }
+                    m_edge.eeEdge = next.eeEdge;
+                    m_edge.eeEnd = (next.eeEnd == eEndA) ? eEndB : eEndA;
+                    m_edge.eeEdge->setTrain(this);
+                }
             }
             else if ((node.nsSlot == eSlot2) && (jsw == eSwitchLeft)) {
                 next = node.nsNode->getEdgeEnd(eSlot1);
-                m_edge.eeEdge = next.eeEdge;
-                m_edge.eeEnd = (next.eeEnd == eEndA) ? eEndB : eEndA;
+                if (next.eeEdge) {
+                    m_edge.eeEdge->setTrain(nullptr);
+                    if (next.eeEdge->getTrain()) {
+                        m_edge.eeEdge = nullptr;
+                        throw std::runtime_error("Train collision detected!");
+                    }
+                    m_edge.eeEdge = next.eeEdge;
+                    m_edge.eeEnd = (next.eeEnd == eEndA) ? eEndB : eEndA;
+                    m_edge.eeEdge->setTrain(this);
+                }
             }
             else if ((node.nsSlot == eSlot3) && (jsw == eSwitchRight)) {
                 next = node.nsNode->getEdgeEnd(eSlot1);
-                m_edge.eeEdge = next.eeEdge;
-                m_edge.eeEnd = (next.eeEnd == eEndA) ? eEndB : eEndA;
+                if (next.eeEdge) {
+                    m_edge.eeEdge->setTrain(nullptr);
+                    if (next.eeEdge->getTrain()) {
+                        m_edge.eeEdge = nullptr;
+                        throw std::runtime_error("Train collision detected!");
+                    }
+                    m_edge.eeEdge = next.eeEdge;
+                    m_edge.eeEnd = (next.eeEnd == eEndA) ? eEndB : eEndA;
+                    m_edge.eeEdge->setTrain(this);
+                }
             }
         }
         break;

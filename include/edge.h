@@ -33,7 +33,8 @@
 namespace rrsim {
 
 class Node;
-class Signal;
+class RRsignal;
+class Train;
 
 // Class Edge
 //     This class represents a segment of railroad track.
@@ -48,8 +49,14 @@ public:
 
     void connectEdge(eEnd myEnd, Edge* other, eEnd toEnd);
 
+    RRsignal* getSignal(eEnd myEnd);
+    void placeSignalLight(eEnd myEnd);
+
+    Train* getTrain() { return m_train; }
+    void setTrain(Train* train) { m_train = train; }
+
     NodeSlot getNode(eEnd getEnd);
-    Node* getAdjacent(eEnd getEnd);
+    NodeSlot getAdjacent(eEnd getEnd);
 
     const std::string& name() { return m_name; }
 
@@ -63,7 +70,8 @@ private:
     std::string     m_name;
     double          m_weight;
     NodeSlot        m_ends[eNumEnds];
-    Signal*         m_signals[eNumEnds];
+    RRsignal*       m_signals[eNumEnds];
+    Train*          m_train;
 };
 
 // EdgeMap

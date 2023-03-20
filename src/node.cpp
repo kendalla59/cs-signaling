@@ -119,7 +119,7 @@ void Node::show()
     for (int ix = 0; ix < eNumSlots; ix++) {
         eptr = m_slots[ix].eeEdge;
         if (eptr) {
-            Node* next = eptr->getAdjacent(m_slots[ix].eeEnd);
+            Node* next = eptr->getAdjacent(m_slots[ix].eeEnd).nsNode;
             if (next) {
                 if (ix > 0) { nstr << ','; }
                 nstr << std::setw(10) << next->name();

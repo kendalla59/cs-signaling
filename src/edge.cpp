@@ -6,6 +6,7 @@
 
 #include "edge.h"
 #include "node.h"
+#include "rrsignal.h"
 #include <iostream>
 #include <sstream>
 #include <iomanip>
@@ -34,8 +35,10 @@ Edge::Edge()
     m_ends[eEndB].nsNode = nodeB;
     m_ends[eEndB].nsSlot = eSlot1;
 
-    m_signals[0] = nullptr; // TODO
-    m_signals[1] = nullptr; // TODO
+    m_signals[0] = nullptr;
+    m_signals[1] = nullptr;
+
+    m_train = nullptr;
 
     g_edgeMap.insert(EdgePair(m_name, this));
 }
@@ -45,7 +48,7 @@ Edge::~Edge()
     for (int ix = 0; ix < eNumEnds; ix++) {
         // TODO: remove edge from node
         if (m_signals[ix]) {
-            // TODO: delete m_signals[ix];
+            delete m_signals[ix];
             m_signals[ix] = nullptr;
         }
     }
@@ -119,26 +122,37 @@ void Edge::connectEdge(eEnd myEnd, Edge* other, eEnd toEnd)
     }
 }
 
-NodeSlot Edge::getNode(eEnd getEnd)
+RRsignal* Edge::getSignal(eEnd myEnd)
 {
-    if (getEnd == eEndA) {
-        return m_ends[eEndA];
+    if ((myEnd != eEndA) && (myEnd != eEndB)) {
+        throw std::runtime_error("Invalid enum passed to getSignal");
     }
-    else if (getEnd == eEndB) {
-        return m_ends[eEndB];
-    }
-    throw std::runtime_error("Bad end value in getNode");
+    return m_signals[myEnd];
 }
 
-Node* Edge::getAdjacent(eEnd getEnd)
+void Edge::placeSignalLight(eEnd myEnd)
 {
-    if (getEnd == eEndA) {
-        return m_ends[eEndB].nsNode;
+    if ((myEnd != eEndA) && (myEnd != eEndB)) {
+        throw std::runtime_error("Invalid enum passed to placeSignalLight");
     }
-    else if (getEnd == eEndB) {
-        return m_ends[eEndA].nsNode;
+    m_signals[myEnd] = new RRsignal(this, myEnd);
+    m_signals[myEnd]->updateSignal();
+}
+
+NodeSlot Edge::getNode(eEnd getEnd)
+{
+    if ((getEnd != eEndA) && (getEnd != eEndB)) {
+        throw std::runtime_error("Invalid enum passed to getNode");
     }
-    throw std::runtime_error("Bad end value in getAdjacent");
+    return m_ends[getEnd];
+}
+
+NodeSlot Edge::getAdjacent(eEnd getEnd)
+{
+    if ((getEnd != eEndA) && (getEnd != eEndB)) {
+        throw std::runtime_error("Invalid enum passed to getAdjacent");
+    }
+    return m_ends[(getEnd == eEndA) ? eEndB : eEndA];
 }
 
 void Edge::show(eEnd showEnd)
