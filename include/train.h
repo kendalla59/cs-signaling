@@ -21,8 +21,11 @@
 
 #include "common.h"
 #include <string>
+#include <queue>
 
 namespace rrsim {
+
+using Route = std::queue<eJSwitch>;
 
 class Train
 {
@@ -30,7 +33,7 @@ public:
     Train();
     ~Train();
 
-    void placeOnTrack(const std::string& trackName, eEnd direction);
+    void placeOnTrack(Edge* start, Edge* end);
 
     // Returns false when the train has reached a terminator.
     bool stepSimulation();
@@ -42,6 +45,8 @@ public:
 private:
     std::string m_name;
     EdgeEnd     m_edge;
+    Edge*       m_destination;
+    Route       m_route;
 };
 
 } // namespace rrsim

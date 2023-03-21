@@ -204,6 +204,7 @@ static int cmdShowConnections()
 
 static int cmdPlaceTrain()
 {
+    std::cout << "Starting - ";
     std::string resp1 = enterName();
     if (resp1.empty()) { return 0; }
     auto iter1 = g_edgeMap.find(resp1);
@@ -215,12 +216,23 @@ static int cmdPlaceTrain()
             return EINVAL;
         }
     }
-    rrsim::eEnd end1 = enterAorB();
+    std::cout << "Ending - ";
+    std::string resp2 = enterName();
+    if (resp2.empty()) { return 0; }
+    auto iter2 = g_edgeMap.find(resp2);
+    if (iter2 == g_edgeMap.end()) {
+        resp2 = nameFromNumber(resp2);
+        iter2 = g_edgeMap.find(resp2);
+        if (iter2 == g_edgeMap.end()) {
+            std::cout << "No such segment \"" << resp2 << "\"" << std::endl;
+            return EINVAL;
+        }
+    }
 
     try {
         rrsim::EdgeEnd edge = g_train.getPosition();
         if (edge.eeEdge) { edge.eeEdge->setTrain(nullptr); }
-        g_train.placeOnTrack(resp1, end1);
+        g_train.placeOnTrack(iter1->second, iter2->second);
         rrsim::RRsignal::updateAllSignals();
         g_train.show();
     }
