@@ -160,6 +160,7 @@ void Edge::connectEdge(eEnd myEnd, Edge* other, eEnd toEnd)
         other->m_ends[toEnd] = replNode;
 
         // Now we can delete the node that we just replaced.
+        g_nodeMap.erase(rmovNode.nsNode->name());
         delete rmovNode.nsNode;
         break;
 
@@ -180,6 +181,7 @@ void Edge::connectEdge(eEnd myEnd, Edge* other, eEnd toEnd)
         other->m_ends[toEnd] = replNode;
 
         // Now we can delete the node that we just replaced.
+        g_nodeMap.erase(rmovNode.nsNode->name());
         delete rmovNode.nsNode;
         break;
 

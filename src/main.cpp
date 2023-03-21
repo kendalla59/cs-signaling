@@ -136,7 +136,7 @@ static int cmdPlaceSignal()
 
 static int cmdToggleSwitch()
 {
-    std::vector<Node *> junctions;
+    std::vector<Node*> junctions;
     for (auto it: g_nodeMap) {
         if (it.second->getNodeType() == rrsim::eJunction) {
             junctions.push_back(it.second);
@@ -221,6 +221,7 @@ static int cmdPlaceTrain()
         rrsim::EdgeEnd edge = g_train.getPosition();
         if (edge.eeEdge) { edge.eeEdge->setTrain(nullptr); }
         g_train.placeOnTrack(resp1, end1);
+        rrsim::RRsignal::updateAllSignals();
         g_train.show();
     }
     catch (std::exception& ex) {
@@ -235,6 +236,7 @@ static int cmdStepSimulation()
 {
     try {
         bool chk = g_train.stepSimulation();
+        rrsim::RRsignal::updateAllSignals();
         g_train.show();
         if (!chk) {
             std::cout << ">>> The Simulation Is Complete <<<" << std::endl;

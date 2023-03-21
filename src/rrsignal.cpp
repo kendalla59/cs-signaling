@@ -8,6 +8,7 @@
 #include "edge.h"
 #include "node.h"
 #include "train.h"
+#include <set>
 
 namespace rrsim {
 
@@ -38,12 +39,19 @@ void RRsignal::updateSignal()
     if (edge.eeEdge->getTrain()) { return; }
     node = m_edge.eeEdge->getNode((m_edge.eeEnd == eEndA) ? eEndB : eEndA);
 
+    // Avoid infinite loops.
+    std::set<Edge*> visitedEdges;
+    visitedEdges.insert(edge.eeEdge);
+
     // Now assume we have a green light, unless we find an oncoming train.
     m_isRed = false;
 
     while (node.nsNode->getNodeType() != eJunction) {
         edge = node.nsNode->getNext(node.nsSlot);
         if (edge.eeEdge == nullptr) { return; }
+        if (visitedEdges.find(edge.eeEdge) != visitedEdges.end()) { return; }
+        visitedEdges.insert(edge.eeEdge);
+
         Train* train = edge.eeEdge->getTrain();
         if (train && (train->getPosition().eeEnd == edge.eeEnd)) {
             // The train is headed toward us.
