@@ -44,10 +44,80 @@ Edge::Edge()
     g_edgeMap.insert(EdgePair(m_name, this));
 }
 
+Edge::Edge(const std::string& serialStr) {
+    int slot;
+    std::string name;
+    std::string token;
+    EdgeEnd edge = { this, eEndA };
+    Node* nptr;
+    size_t pos1 = 7;
+    size_t pos2 = serialStr.find(',', pos1);
+    name = serialStr.substr(pos1, pos2-pos1);
+    m_name = name;
+    std::cout << "Name: " << m_name;
+    pos1 = pos2 + 1;
+    pos2 = serialStr.find(',', pos1);
+    token = serialStr.substr(pos1, pos2-pos1);
+    m_weight = std::stod(token);
+    std::cout << " weight: " << m_weight;
+
+    // Node at the A side.
+    pos1 = pos2 + 1;
+    pos2 = serialStr.find(',', pos1);
+    name = serialStr.substr(pos1, pos2-pos1);
+    pos1 = pos2 + 1;
+    pos2 = serialStr.find(',', pos1);
+    token = serialStr.substr(pos1, pos2-pos1);
+    slot = std::stoi(token);
+    std::cout << " endA: " << name << "-" << slot;
+    auto itA = g_nodeMap.find(name);
+    if (itA == g_nodeMap.end()) { nptr = new Node(name); }
+    else                        { nptr = itA->second; }
+    edge.eeEnd = eEndA;
+    nptr->setEdgeEnd(edge, (eSlot)slot);
+    m_ends[eEndA].nsNode = nptr;
+    m_ends[eEndA].nsSlot = (eSlot)slot;
+
+    // Node at the B side.
+    pos1 = pos2 + 1;
+    pos2 = serialStr.find(',', pos1);
+    name = serialStr.substr(pos1, pos2-pos1);
+    pos1 = pos2 + 1;
+    pos2 = serialStr.find(',', pos1);
+    token = serialStr.substr(pos1, pos2-pos1);
+    slot = std::stoi(token);
+    std::cout << " endB: " << name << "-" << slot;
+    auto itB = g_nodeMap.find(name);
+    if (itB == g_nodeMap.end()) { nptr = new Node(name); }
+    else                        { nptr = itB->second; }
+    edge.eeEnd = eEndB;
+    nptr->setEdgeEnd(edge, (eSlot)slot);
+    m_ends[eEndB].nsNode = nptr;
+    m_ends[eEndB].nsSlot = (eSlot)slot;
+
+    // Signal lights.
+    pos1 = pos2 + 1;
+    pos2 = serialStr.find(',', pos1);
+    token = serialStr.substr(pos1, pos2-pos1);
+    if (token == "sigA:Y") {
+        std::cout << " sigA";
+        placeSignalLight(eEndA);
+    }
+    token = serialStr.substr(pos2 + 1);
+    if (token == "sigB:Y") {
+        std::cout << " sigB";
+        placeSignalLight(eEndB);
+    }
+    std::cout << std::endl;
+
+    m_train = nullptr;
+
+    g_edgeMap.insert(EdgePair(m_name, this));
+}
+
 Edge::~Edge()
 {
     for (int ix = 0; ix < eNumEnds; ix++) {
-        // TODO: remove edge from node
         if (m_signals[ix]) {
             delete m_signals[ix];
             m_signals[ix] = nullptr;
@@ -136,8 +206,10 @@ void Edge::placeSignalLight(eEnd myEnd)
     if ((myEnd != eEndA) && (myEnd != eEndB)) {
         throw std::runtime_error("Invalid enum passed to placeSignalLight");
     }
+    if (m_signals[myEnd]) {
+        throw std::runtime_error("Signal has already been placed here");
+    }
     m_signals[myEnd] = new RRsignal(this, myEnd);
-    m_signals[myEnd]->updateSignal();
 }
 
 NodeSlot Edge::getNode(eEnd getEnd)
@@ -196,11 +268,23 @@ void Edge::show(eEnd showEnd)
             }
             break;
         }
+        if (m_signals[eEndA]) {
+            msg += (m_signals[eEndA]->signalIsRed() ? "R " : "G ");
+        }
+        else {
+            msg += "_ ";
+        }
     }
 
     msg += m_name;
 
     if ((showEnd == eEndB) || (showEnd == eNumEnds)) {
+        if (m_signals[eEndB]) {
+            msg += (m_signals[eEndB]->signalIsRed() ? " R" : " G");
+        }
+        else {
+            msg += " _";
+        }
         NodeSlot node = m_ends[eEndB];
         EdgeEnd edge;
         if (node.nsNode == nullptr) {
@@ -246,6 +330,17 @@ void Edge::show(eEnd showEnd)
         }
     }
     std::cout << msg << std::endl;
+}
+
+std::string Edge::serialize()
+{
+    std::stringstream ss;
+    ss << "track: " << m_name << ',' << m_weight << ','
+       << m_ends[0].nsNode->name() << ',' << m_ends[0].nsSlot << ','
+       << m_ends[1].nsNode->name() << ',' << m_ends[1].nsSlot << ','
+       << "sigA:" << (m_signals[0] ? "Y" : "N") << ','
+       << "sigB:" << (m_signals[1] ? "Y" : "N") << std::endl;
+    return ss.str();
 }
 
 // Static method to determine the next unused name for an edge.

@@ -33,6 +33,8 @@ public:
     void updateSignal();
     bool signalIsRed() { return m_isRed; }
 
+    static void updateAllSignals();
+
 private:
     bool        m_isRed;
     EdgeEnd     m_edge;

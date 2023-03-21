@@ -27,12 +27,21 @@ Node::Node()
     g_nodeMap.insert(NodePair(m_name, this));
 }
 
+Node::Node(const std::string& name)
+{
+    m_name = name;
+    for (int ix = 0; ix < eNumSlots; ix++) {
+        m_slots[ix].eeEdge = nullptr;
+        m_slots[ix].eeEnd = eNumEnds;
+    }
+    m_switchState = eSwitchLeft;
+
+    g_nodeMap.insert(NodePair(m_name, this));
+}
+
 Node::~Node()
 {
-    auto it = g_nodeMap.find(m_name);
-    if (it != g_nodeMap.end()) {
-        g_nodeMap.erase(it);
-    }
+    // Caller is responsible for updating g_nodeMap.
 }
 
 eNodeType Node::getNodeType()
@@ -69,6 +78,14 @@ void Node::makeJunction(const EdgeEnd& track)
     }
     m_slots[eSlot3] = track;
     m_switchState = eSwitchLeft;
+}
+
+void Node::setEdgeEnd(const EdgeEnd& track, eSlot slot)
+{
+    if ((slot != eSlot1) && (slot != eSlot2) && (slot != eSlot3)) {
+        throw std::runtime_error("Invalid slot for setEdgeEnd");
+    }
+    m_slots[slot] = track;
 }
 
 EdgeEnd Node::getNext(eSlot slot)

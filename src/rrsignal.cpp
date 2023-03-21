@@ -54,4 +54,16 @@ void RRsignal::updateSignal()
     }
 }
 
+void RRsignal::updateAllSignals()
+{
+    for (auto iter: g_edgeMap) {
+        if (iter.second) {
+            for (int ix = 0; ix < eNumEnds; ix++) {
+                RRsignal* sig = iter.second->getSignal((eEnd)ix);
+                if (sig) { sig->updateSignal(); }
+            }
+        }
+    }
+}
+
 } // namespace rrsim

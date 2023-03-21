@@ -7,9 +7,11 @@
 
 #include "node.h"
 #include "edge.h"
+#include "rrsignal.h"
 #include "train.h"
 #include "config.h"
 #include <iostream>
+#include <fstream>
 #include <sstream>
 #include <iomanip>
 #include <map>
@@ -57,11 +59,6 @@ static rrsim::eEnd enterAorB()
     }
     return rval;
 }
-static int cmdSmokeTest()
-{
-    return 0;
-}
-
 static int cmdAddSegment()
 {
     Edge* pEdge = new Edge();
@@ -106,6 +103,34 @@ static int cmdConnectSegments()
         std::cout << "ERROR: " << ex.what() << std::endl;
         return EBUSY;
     }
+    return 0;
+}
+
+static int cmdPlaceSignal()
+{
+    std::string resp1 = enterName();
+    if (resp1.empty()) { return 0; }
+    auto iter1 = g_edgeMap.find(resp1);
+    if (iter1 == g_edgeMap.end()) {
+        resp1 = nameFromNumber(resp1);
+        iter1 = g_edgeMap.find(resp1);
+        if (iter1 == g_edgeMap.end()) {
+            std::cout << "No such segment \"" << resp1 << "\"" << std::endl;
+            return EINVAL;
+        }
+    }
+    rrsim::eEnd end1 = enterAorB();
+
+    try {
+        iter1->second->placeSignalLight(end1);
+        rrsim::RRsignal::updateAllSignals();
+        iter1->second->show(end1);
+    }
+    catch (std::exception& ex) {
+        std::cout << "ERROR: " << ex.what() << std::endl;
+        return EFAULT;
+    }
+
     return 0;
 }
 
@@ -193,6 +218,8 @@ static int cmdPlaceTrain()
     rrsim::eEnd end1 = enterAorB();
 
     try {
+        rrsim::EdgeEnd edge = g_train.getPosition();
+        if (edge.eeEdge) { edge.eeEdge->setTrain(nullptr); }
         g_train.placeOnTrack(resp1, end1);
         g_train.show();
     }
@@ -221,28 +248,110 @@ static int cmdStepSimulation()
     return 0;
 }
 
-int runCommand()
+static int cmdSaveNetwork()
+{
+    std::string path;
+    std::cout << "Enter file path: ";
+    std::getline(std::cin, path);
+    if (path.empty()) {
+        std::cout << "No response, quitting..." << std::endl;
+        return 0;
+    }
+    std::ifstream ifstr(path);
+    if (ifstr.good()) {
+        std::cout << path << " exists. Replace contents? [y/n] ";
+        std::string resp;
+        std::getline(std::cin, resp);
+        if ((resp != "Y") && (resp != "y")) {
+            std::cout << "NOT replacing contents. quitting..." << std::endl;
+            return 0;
+        }
+    }
+    ifstr.close();
+    std::ofstream ofstr(path, std::ofstream::trunc);
+    if (!ofstr.good()) {
+        std::cout << "Unable to open file " << path << ", quitting..." << std::endl;
+        return 0;
+    }
+    for (auto iter: g_edgeMap) {
+        Edge* edge = iter.second;
+        if (edge) {
+            ofstr << edge->serialize();
+        }
+    }
+    ofstr.close();
+    return 0;
+}
+
+static int cmdLoadNetwork()
+{
+    if (!g_edgeMap.empty()) {
+        std::cout << "WARNING: This will delete the existing network" << std::endl;
+        std::cout << "         Press ENTER key at the prompt to quit" << std::endl;
+    }
+    std::string path;
+    std::cout << "Enter file path: ";
+    std::getline(std::cin, path);
+    if (path.empty()) {
+        std::cout << "No response, quitting..." << std::endl;
+        return 0;
+    }
+    std::ifstream ifstr(path);
+    if (!ifstr.good()) {
+        std::cout << path << " not found, quitting..." << std::endl;
+        return ENOENT;
+    }
+    // Clear out the existing network.
+    for (auto iter: g_edgeMap) {
+        if (iter.second) { delete iter.second; }
+    }
+    g_edgeMap.clear();
+
+    for (auto iter: g_nodeMap) {
+        if (iter.second) { delete iter.second; }
+    }
+    g_nodeMap.clear();
+
+    std::string segment;
+    try {
+        while (!ifstr.eof()) {
+            std::getline(ifstr, segment);
+            if (segment.empty()) continue;
+            if (segment.substr(0, 7) != "track: ") {
+                throw std::runtime_error("Serialized string preamble missing");
+            }
+            new Edge(segment);
+        }
+    }
+    catch (std::exception& ex) {
+        std::cout << "ERROR: " << ex.what() << std::endl;
+        std::cout << "segment: \"" << segment << "\"" << std::endl;
+        return EFAULT;
+    }
+    return 0;
+}
+
+int runCommandBuild()
 {
     int rc;
 
     std::cout << std::endl <<
-            "Train Signaling System Simulator"              << std::endl <<
+            "Build Track Network submenu"                   << std::endl <<
             "1. Add a track segment"                        << std::endl <<
             "2. Connect track segments"                     << std::endl <<
-            "3. Toggle Junction Switch"                     << std::endl <<
-            "4. List track segments"                        << std::endl <<
-            "5. Show track connections"                     << std::endl <<
-            "6. Place train on a track segment"             << std::endl <<
-            "7. Step the train simulation"                  << std::endl <<
-            "8. Run smoke test"                             << std::endl <<
-            "Q/quit/exit"                                   << std::endl;
+            "3. Place a signal light"                       << std::endl <<
+            "4. Toggle junction switch"                     << std::endl <<
+            "5. List track segments"                        << std::endl <<
+            "6. Save track network"                         << std::endl <<
+            "7. Load track network"                         << std::endl <<
+            "R/return"                                      << std::endl;
 
     std::string resp;
     while (resp.empty()) {
         std::cout << "=> ";
         std::getline(std::cin, resp);
     }
-    if (resp == "Q" || resp == "q" || resp == "quit" || resp == "exit") {
+    if (resp == "R" || resp == "r" || resp == "q" || resp == "return") {
         return 1;
     }
     int cmd;
@@ -260,33 +369,89 @@ int runCommand()
         std::cout << "----------------------------------------------------" << std::endl;
         break;
     case 3:
+        std::cout << "---------------- Place Signal Light ----------------" << std::endl;
+        rc = cmdPlaceSignal();
+        std::cout << "----------------------------------------------------" << std::endl;
+        break;
+    case 4:
         std::cout << "-------------- Toggle Junction Switch --------------" << std::endl;
         rc = cmdToggleSwitch();
         std::cout << "----------------------------------------------------" << std::endl;
         break;
-    case 4:
+    case 5:
         std::cout << "--------------- List Track Segments ----------------" << std::endl;
         rc = cmdListSegments();
         std::cout << "----------------------------------------------------" << std::endl;
         break;
-    case 5:
+    case 6:
+        std::cout << "---------------- Save Track Network ----------------" << std::endl;
+        rc = cmdSaveNetwork();
+        std::cout << "----------------------------------------------------" << std::endl;
+        break;
+    case 7:
+        std::cout << "---------------- Load Track Network ----------------" << std::endl;
+        rc = cmdLoadNetwork();
+        std::cout << "----------------------------------------------------" << std::endl;
+        break;
+    default:
+        std::cout << "Invalid entry: \"" << resp << "\"" << std::endl;
+        rc = EINVAL;
+        std::cout << "----------------------------------------------------" << std::endl;
+        break;
+    }
+    if (rc) std::cout << "(Error code " << rc << " was returned)" << std::endl;
+    return 0;
+}
+
+int runCommand()
+{
+    int rc;
+
+    std::cout << std::endl <<
+            "Train Signaling System Simulator"              << std::endl <<
+            "1. Build track network (submenu)"              << std::endl <<
+            "2. List track segments"                        << std::endl <<
+            "3. Show track connections"                     << std::endl <<
+            "4. Place train on a track segment"             << std::endl <<
+            "5. Step the train simulation"                  << std::endl <<
+            "Q/quit/exit"                                   << std::endl;
+
+    std::string resp;
+    while (resp.empty()) {
+        std::cout << "=> ";
+        std::getline(std::cin, resp);
+    }
+    if (resp == "Q" || resp == "q" || resp == "quit" || resp == "exit") {
+        return 1;
+    }
+    int cmd;
+    try { cmd = std::stoi(resp); } catch (...) { cmd = 0; }
+
+    switch (cmd) {
+    case 1:
+        std::cout << "--------------- Build Track Network ----------------" << std::endl;
+        while (runCommandBuild() == 0) {}
+        rc = 0;
+        std::cout << "----------------------------------------------------" << std::endl;
+        break;
+    case 2:
+        std::cout << "--------------- List Track Segments ----------------" << std::endl;
+        rc = cmdListSegments();
+        std::cout << "----------------------------------------------------" << std::endl;
+        break;
+    case 3:
         std::cout << "----------------- Show Connections -----------------" << std::endl;
         rc = cmdShowConnections();
         std::cout << "----------------------------------------------------" << std::endl;
         break;
-    case 6:
+    case 4:
         std::cout << "--------------- Place Train On Track ---------------" << std::endl;
         rc = cmdPlaceTrain();
         std::cout << "----------------------------------------------------" << std::endl;
         break;
-    case 7:
+    case 5:
         std::cout << "----------------- Step Simulation ------------------" << std::endl;
         rc = cmdStepSimulation();
-        std::cout << "----------------------------------------------------" << std::endl;
-        break;
-    case 8:
-        std::cout << "------------------ Run Smoke Test ------------------" << std::endl;
-        rc = cmdSmokeTest();
         std::cout << "----------------------------------------------------" << std::endl;
         break;
     default:

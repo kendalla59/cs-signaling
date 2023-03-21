@@ -45,6 +45,7 @@ class Edge
 {
 public:
     Edge();
+    Edge(const std::string& serialStr);
     ~Edge();
 
     void connectEdge(eEnd myEnd, Edge* other, eEnd toEnd);
@@ -61,6 +62,8 @@ public:
     const std::string& name() { return m_name; }
 
     void show(eEnd showEnd = eNumEnds);
+
+    std::string serialize();
 
     // This static method returns an edge name of the pattern "tsegNNN"
     // that is not currently in the global edge map.

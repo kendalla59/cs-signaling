@@ -36,6 +36,7 @@ class Node
 {
 public:
     Node();
+    Node(const std::string& name);
     ~Node();
 
     eNodeType getNodeType();
@@ -53,6 +54,9 @@ public:
     // fork of the junction, and the third slot holds the right fork. This
     // assumes the node is currently a continuation.
     void makeJunction(const EdgeEnd& track);
+
+    // Set the EdgeEnd directly into a slot (used for deserialization).
+    void setEdgeEnd(const EdgeEnd& track, eSlot slot);
 
     // Return the EdgeEnd attached at the given slot.
     EdgeEnd getEdgeEnd(eSlot slot) { return m_slots[slot]; }
