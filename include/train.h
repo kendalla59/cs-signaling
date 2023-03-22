@@ -21,11 +21,11 @@
 
 #include "common.h"
 #include <string>
-#include <queue>
+#include <stack>
 
 namespace rrsim {
 
-using Route = std::queue<eJSwitch>;
+using Route = std::stack<eJSwitch>;
 
 class Train
 {
@@ -43,6 +43,9 @@ public:
     void show();
 
 private:
+
+    void getOptimalRoute();
+
     std::string m_name;
     EdgeEnd     m_edge;
     Edge*       m_destination;

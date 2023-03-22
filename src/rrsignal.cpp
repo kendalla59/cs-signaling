@@ -37,7 +37,7 @@ void RRsignal::updateSignal()
 
     // The next segment has a train, nothing more to do.
     if (edge.eeEdge->getTrain()) { return; }
-    node = m_edge.eeEdge->getNode((m_edge.eeEnd == eEndA) ? eEndB : eEndA);
+    node = edge.eeEdge->getNode((edge.eeEnd == eEndA) ? eEndB : eEndA);
 
     // Avoid infinite loops.
     std::set<Edge*> visitedEdges;
@@ -58,7 +58,7 @@ void RRsignal::updateSignal()
             m_isRed = true;
             return;
         }
-        node = m_edge.eeEdge->getNode((m_edge.eeEnd == eEndA) ? eEndB : eEndA);
+        node = edge.eeEdge->getNode((edge.eeEnd == eEndA) ? eEndB : eEndA);
     }
 }
 

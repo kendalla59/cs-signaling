@@ -336,6 +336,7 @@ static int cmdLoadNetwork()
             }
             new Edge(segment);
         }
+        rrsim::RRsignal::updateAllSignals();
     }
     catch (std::exception& ex) {
         std::cout << "ERROR: " << ex.what() << std::endl;

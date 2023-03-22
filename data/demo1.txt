@@ -1,0 +1,7 @@
+track: tseg001,1,node001,0,node002,0,sigA:N,sigB:N
+track: tseg002,1,node002,1,node004,0,sigA:N,sigB:N
+track: tseg003,1,node004,1,node005,0,sigA:N,sigB:Y
+track: tseg004,1,node005,1,node003,1,sigA:Y,sigB:N
+track: tseg005,1,node003,0,node007,0,sigA:N,sigB:N
+track: tseg006,1,node005,2,node008,0,sigA:Y,sigB:N
+track: tseg007,1,node008,1,node009,0,sigA:N,sigB:N
