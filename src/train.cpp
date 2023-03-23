@@ -33,9 +33,16 @@ void Train::placeOnTrack(Edge* start, Edge* end)
         // Remove the train from its current track segment.
         m_edge.eeEdge->setTrain(nullptr);
         m_edge.eeEdge = nullptr;
+        m_destination = nullptr;
     }
+    while (!m_route.empty()) { m_route.pop(); }
+
+    // Nothing else to do if we aren't going anywhere.
+    if (!start || !end) { return; }
+
     if (start->getTrain()) {
-        throw std::runtime_error("A train is already on segment: " + start->name());
+        throw std::runtime_error(
+                "A train is already on segment: " + start->name());
     }
     start->setTrain(this);
     m_edge.eeEdge = start;
@@ -188,7 +195,11 @@ void Train::getOptimalRoute()
 {
     Edge* start = m_edge.eeEdge;
     Edge* end = m_destination;
-
+    if (!start || !end) {
+        // Missing end(s), no route is possible.
+        while (!m_route.empty()) { m_route.pop(); }
+        return;
+    }
     std::queue<QNode*> searchQueue;
     std::queue<QNode*> poppedQueue;
     std::set<std::string> visitedSet;

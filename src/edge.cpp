@@ -96,6 +96,8 @@ Edge::Edge(const std::string& serialStr) {
     m_ends[eEndB].nsSlot = (eSlot)slot;
 
     // Signal lights.
+    m_signals[eEndA] = nullptr;
+    m_signals[eEndB] = nullptr;
     pos1 = pos2 + 1;
     pos2 = serialStr.find(',', pos1);
     token = serialStr.substr(pos1, pos2-pos1);
@@ -122,6 +124,9 @@ Edge::~Edge()
             delete m_signals[ix];
             m_signals[ix] = nullptr;
         }
+    }
+    if (m_train) {
+        m_train->placeOnTrack(nullptr, nullptr);
     }
 }
 

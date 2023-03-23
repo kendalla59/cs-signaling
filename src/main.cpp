@@ -25,6 +25,20 @@ using rrsim::g_edgeMap;
 
 Train g_train;
 
+static void resetTrackNetwork()
+{
+    // Clear out the existing network.
+    for (auto iter: g_edgeMap) {
+        if (iter.second) { delete iter.second; }
+    }
+    g_edgeMap.clear();
+
+    for (auto iter: g_nodeMap) {
+        if (iter.second) { delete iter.second; }
+    }
+    g_nodeMap.clear();
+}
+
 static std::string enterName()
 {
     std::string resp;
@@ -316,16 +330,9 @@ static int cmdLoadNetwork()
         return ENOENT;
     }
     // Clear out the existing network.
-    for (auto iter: g_edgeMap) {
-        if (iter.second) { delete iter.second; }
-    }
-    g_edgeMap.clear();
+    resetTrackNetwork();
 
-    for (auto iter: g_nodeMap) {
-        if (iter.second) { delete iter.second; }
-    }
-    g_nodeMap.clear();
-
+    // Load the previously saved network.
     std::string segment;
     try {
         while (!ifstr.eof()) {
@@ -488,5 +495,7 @@ int main(int argc, char **argv) {
     std::cout << "Version " << cs_signaling_VERSION_MAJOR << "." << cs_signaling_VERSION_MINOR << std::endl;
 
     while (runCommand() == 0) {}
+
+    resetTrackNetwork();
     return 0;
 }
