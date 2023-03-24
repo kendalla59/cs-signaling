@@ -14,20 +14,19 @@
 
 namespace rrsim {
 
-// This is the list of all edges which exist in the railroad track network.
-EdgeMap g_edgeMap;
-
 Edge::Edge()
 {
     m_name = getUniqueEdgeName();
     m_weight = 1.0; // TODO
 
-    Node* nodeA = new Node;
-    Node* nodeB = new Node;
+    NodePtr nodeA = std::make_shared<Node>();
+    NodePtr nodeB = std::make_shared<Node>();
 
-    EdgeEnd edgeA = { this, eEndA };
+    EdgePtr eptr = std::make_shared<Edge>(this);
+
+    EdgeEnd edgeA = { eptr, eEndA };
     nodeA->makeTerminator(edgeA);
-    EdgeEnd edgeB = { this, eEndB };
+    EdgeEnd edgeB = { eptr, eEndB };
     nodeB->makeTerminator(edgeB);
 
     m_ends[eEndA].nsNode = nodeA;
@@ -41,14 +40,15 @@ Edge::Edge()
 
     m_train = nullptr;
 
-    g_edgeMap.insert(EdgePair(m_name, this));
 }
 
 Edge::Edge(const std::string& serialStr) {
     int slot;
     std::string name;
     std::string token;
-    EdgeEnd edge = { this, eEndA };
+
+    EdgePtr eptr = std::make_shared<Edge>(this);
+    EdgeEnd edge = { eptr, eEndA };
     Node* nptr;
     size_t pos1 = 7;
     size_t pos2 = serialStr.find(',', pos1);
@@ -113,8 +113,6 @@ Edge::Edge(const std::string& serialStr) {
     std::cout << std::endl;
 
     m_train = nullptr;
-
-    g_edgeMap.insert(EdgePair(m_name, this));
 }
 
 Edge::~Edge()
@@ -233,6 +231,14 @@ NodeSlot Edge::getAdjacent(eEnd getEnd)
         throw std::runtime_error("Invalid enum passed to getAdjacent");
     }
     return m_ends[(getEnd == eEndA) ? eEndB : eEndA];
+}
+
+void Edge::assignNodeSlot(NodeSlot node, eEnd nodeEnd)
+{
+    if ((nodeEnd != eEndA) && (nodeEnd != eEndB)) {
+        throw std::runtime_error("Invalid enum passed to assignNodeSlot");
+    }
+    m_ends[nodeEnd] = node;
 }
 
 void Edge::show(eEnd showEnd)

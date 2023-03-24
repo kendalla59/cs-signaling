@@ -9,6 +9,7 @@
 #include "edge.h"
 #include "rrsignal.h"
 #include "train.h"
+#include "system.h"
 #include "config.h"
 #include <iostream>
 #include <fstream>
@@ -17,27 +18,9 @@
 #include <map>
 #include <vector>
 
+using rrsim::EdgePtr;
 using rrsim::Node;
-using rrsim::Edge;
-using rrsim::Train;
-using rrsim::g_nodeMap;
-using rrsim::g_edgeMap;
-
-Train g_train;
-
-static void resetTrackNetwork()
-{
-    // Clear out the existing network.
-    for (auto iter: g_edgeMap) {
-        if (iter.second) { delete iter.second; }
-    }
-    g_edgeMap.clear();
-
-    for (auto iter: g_nodeMap) {
-        if (iter.second) { delete iter.second; }
-    }
-    g_nodeMap.clear();
-}
+using rrsim::TrainPtr;
 
 static std::string enterName()
 {
@@ -75,43 +58,51 @@ static rrsim::eEnd enterAorB()
 }
 static int cmdAddSegment()
 {
-    Edge* pEdge = new Edge();
-    g_edgeMap.insert(rrsim::EdgePair(pEdge->name(), pEdge));
-    std::cout << "Added new track segment \"" << pEdge->name() << "\"" << std::endl;
-    return 0;
+    EdgePtr eptr = sys().createEdge();
+    if (eptr) {
+        std::cout << "Added new track segment \""
+                << eptr->name() << "\"" << std::endl;
+        return 0;
+    }
+    std::cout << "ERROR: Failed to add new track segment" << std::endl;
+    return EFAULT;
 }
 
 static int cmdConnectSegments()
 {
     std::string resp1 = enterName();
     if (resp1.empty()) { return 0; }
-    auto iter1 = g_edgeMap.find(resp1);
-    if (iter1 == g_edgeMap.end()) {
-        resp1 = nameFromNumber(resp1);
-        iter1 = g_edgeMap.find(resp1);
-        if (iter1 == g_edgeMap.end()) {
+    EdgePtr eptr1 = sys().getEdge(resp1);
+    if (!eptr1) {
+        std::string rnum = nameFromNumber(resp1);
+        eptr1 = sys().getEdge(rnum);
+        if (!eptr1) {
             std::cout << "No such segment \"" << resp1 << "\"" << std::endl;
             return EINVAL;
         }
+        resp1 = rnum;
     }
     rrsim::eEnd end1 = enterAorB();
 
     std::string resp2 = enterName();
     if (resp2.empty()) { return 0; }
-    auto iter2 = g_edgeMap.find(resp2);
-    if (iter2 == g_edgeMap.end()) {
-        resp2 = nameFromNumber(resp2);
-        iter2 = g_edgeMap.find(resp2);
-        if (iter2 == g_edgeMap.end()) {
+    EdgePtr eptr2 = sys().getEdge(resp2);
+    if (!eptr2) {
+        std::string rnum = nameFromNumber(resp2);
+        eptr2 = sys().getEdge(resp2);
+        if (!eptr2) {
             std::cout << "No such segment \"" << resp2 << "\"" << std::endl;
             return EINVAL;
         }
+        resp2 = rnum;
     }
     rrsim::eEnd end2 = enterAorB();
 
     try {
-        iter1->second->connectEdge(end1, iter2->second, end2);
-        iter1->second->show(end1);
+        rrsim::EdgeEnd seg1(eptr1, end1);
+        rrsim::EdgeEnd seg2(eptr2, end2);
+        sys().connectSegments(seg1, seg2);
+        eptr1->show();
     }
     catch(std::exception& ex) {
         std::cout << "ERROR: " << ex.what() << std::endl;
@@ -119,7 +110,7 @@ static int cmdConnectSegments()
     }
     return 0;
 }
-
+/*
 static int cmdPlaceSignal()
 {
     std::string resp1 = enterName();
@@ -352,7 +343,7 @@ static int cmdLoadNetwork()
     }
     return 0;
 }
-
+*/
 int runCommandBuild()
 {
     int rc;
@@ -392,27 +383,27 @@ int runCommandBuild()
         break;
     case 3:
         std::cout << "---------------- Place Signal Light ----------------" << std::endl;
-        rc = cmdPlaceSignal();
+        //rc = cmdPlaceSignal();
         std::cout << "----------------------------------------------------" << std::endl;
         break;
     case 4:
         std::cout << "-------------- Toggle Junction Switch --------------" << std::endl;
-        rc = cmdToggleSwitch();
+        //rc = cmdToggleSwitch();
         std::cout << "----------------------------------------------------" << std::endl;
         break;
     case 5:
         std::cout << "--------------- List Track Segments ----------------" << std::endl;
-        rc = cmdListSegments();
+        //rc = cmdListSegments();
         std::cout << "----------------------------------------------------" << std::endl;
         break;
     case 6:
         std::cout << "---------------- Save Track Network ----------------" << std::endl;
-        rc = cmdSaveNetwork();
+        //rc = cmdSaveNetwork();
         std::cout << "----------------------------------------------------" << std::endl;
         break;
     case 7:
         std::cout << "---------------- Load Track Network ----------------" << std::endl;
-        rc = cmdLoadNetwork();
+        //rc = cmdLoadNetwork();
         std::cout << "----------------------------------------------------" << std::endl;
         break;
     default:
@@ -458,22 +449,22 @@ int runCommand()
         break;
     case 2:
         std::cout << "--------------- List Track Segments ----------------" << std::endl;
-        rc = cmdListSegments();
+        //rc = cmdListSegments();
         std::cout << "----------------------------------------------------" << std::endl;
         break;
     case 3:
         std::cout << "----------------- Show Connections -----------------" << std::endl;
-        rc = cmdShowConnections();
+        //rc = cmdShowConnections();
         std::cout << "----------------------------------------------------" << std::endl;
         break;
     case 4:
         std::cout << "--------------- Place Train On Track ---------------" << std::endl;
-        rc = cmdPlaceTrain();
+        //rc = cmdPlaceTrain();
         std::cout << "----------------------------------------------------" << std::endl;
         break;
     case 5:
         std::cout << "----------------- Step Simulation ------------------" << std::endl;
-        rc = cmdStepSimulation();
+        //rc = cmdStepSimulation();
         std::cout << "----------------------------------------------------" << std::endl;
         break;
     default:
@@ -496,6 +487,6 @@ int main(int argc, char **argv) {
 
     while (runCommand() == 0) {}
 
-    resetTrackNetwork();
+    sys().resetTrackNetwork();
     return 0;
 }

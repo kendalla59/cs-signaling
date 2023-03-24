@@ -9,6 +9,8 @@
 #ifndef _CS_COMMON_H_
 #define _CS_COMMON_H_
 
+#include <memory>
+
 namespace rrsim {
 
 // Nodes can be terminator, continuation, or junction types.
@@ -53,17 +55,23 @@ enum eEnd {
     eNumEnds = 2
 };
 
-class Node;
 class Edge;
+class Node;
+using EdgePtr = std::shared_ptr<Edge>;
+using NodePtr = std::shared_ptr<Node>;
 
 struct NodeSlot {
-    Node*   nsNode;
+    NodePtr nsNode;
     eSlot   nsSlot;
+    NodeSlot() : nsNode(), nsSlot(eNumSlots) {}
+    NodeSlot(NodePtr n, eSlot s) : nsNode(n), nsSlot(s) {}
 };
 
 struct EdgeEnd {
-    Edge*   eeEdge;
+    EdgePtr eeEdge;
     eEnd    eeEnd;
+    EdgeEnd() : eeEdge(), eeEnd(eNumEnds) {}
+    EdgeEnd(EdgePtr e, eEnd d) : eeEdge(e), eeEnd(d) {}
 };
 
 } // namespace rrsim

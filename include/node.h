@@ -88,16 +88,6 @@ private:
     eJSwitch        m_switchState;
 };
 
-// NodeMap
-//     All nodes are kept in this globally accessible container. This is the
-//     adjacency list for the graph of the railroad track network. Searching
-//     the graph is useful for finding the optimal route for a train.
-//
-using NodeMap = std::map<std::string, Node*>;
-using NodePair = std::pair<std::string, Node*>;
-
-extern NodeMap g_nodeMap;
-
 } // namespace rrsim
 
 #endif // _CS_NODE_H_

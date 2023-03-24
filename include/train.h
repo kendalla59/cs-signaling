@@ -40,6 +40,8 @@ public:
 
     EdgeEnd getPosition() { return m_edge; }
 
+    const std::string& name() { return m_name; }
+
     void show();
 
 private:

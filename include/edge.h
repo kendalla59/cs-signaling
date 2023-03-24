@@ -58,6 +58,7 @@ public:
 
     NodeSlot getNode(eEnd getEnd);
     NodeSlot getAdjacent(eEnd getEnd);
+    void assignNodeSlot(NodeSlot node, eEnd nodeEnd);
 
     const std::string& name() { return m_name; }
 
@@ -76,16 +77,6 @@ private:
     RRsignal*       m_signals[eNumEnds];
     Train*          m_train;
 };
-
-// EdgeMap
-//     All edges are kept in this globally accessible container.
-//     Edges represent track segments, and a train may be placed
-//     on any of the edges to begin the simulation.
-//
-using EdgeMap = std::map<std::string, Edge*>;
-using EdgePair = std::pair<std::string, Edge*>;
-
-extern EdgeMap g_edgeMap;
 
 } // namespace rrsim
 

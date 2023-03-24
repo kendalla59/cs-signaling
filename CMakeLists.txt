@@ -9,6 +9,7 @@ set (CMAKE_BUILD_TYPE Debug)
 
 include_directories(include)
 set (SRC src/main.cpp
+         src/system.cpp
          src/edge.cpp
          src/node.cpp
          src/rrsignal.cpp
