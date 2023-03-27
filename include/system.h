@@ -11,23 +11,23 @@
 #ifndef _CS_SYSTEM_H_
 #define _CS_SYSTEM_H_
 
-#include "edge.h"
-#include "node.h"
-#include "train.h"
+#include "common.h"
 #include <string>
 #include <map>
 #include <memory>
+#include <vector>
 
 namespace rrsim {
 
-using EdgePtr   = std::shared_ptr<Edge>;
-using TrainPtr  = std::shared_ptr<Train>;
-
 using EdgeMap   = std::map<std::string, EdgePtr>;
+using NodeMap   = std::map<std::string, NodePtr>;
 using TrainMap  = std::map<std::string, TrainPtr>;
 
 using EdgeItem  = EdgeMap::value_type;
+using NodeItem  = NodeMap::value_type;
 using TrainItem = TrainMap::value_type;
+
+using NodeVec   = std::vector<NodePtr>;
 
 class System
 {
@@ -35,17 +35,27 @@ public:
     static System& instance();
     static void destroy();
 
+    static const std::string emptyStr;
+
     void resetTrackNetwork();
 
-    EdgePtr     createEdge();
+    EdgePtr     createEdge(const std::string& name = emptyStr);
     EdgePtr     getEdge(const std::string& name);
+    void        removeEdge(const std::string& name);
 
-    TrainPtr    createTrain();
+    NodePtr     createNode(const std::string& name = emptyStr);
+    NodePtr     getNode(const std::string& name);
+    void        removeNode(const std::string& name);
+
+    TrainPtr    createTrain(const std::string& name = emptyStr);
     TrainPtr    getTrain(const std::string& name);
+    void        removeTrain(const std::string& name);
 
     int         connectSegments(const EdgeEnd& s1, const EdgeEnd& s2);
-    int cmdPlaceSignal();
-    int cmdToggleSwitch();
+    int         showEdges();
+
+    void        updateAllSignals();
+    NodeVec     getAllJunctions();
 
     // Disallow copying the System singleton.
     System(System const&)           = delete;
@@ -55,7 +65,12 @@ private:
     System();
     ~System();
 
+    std::string getUniqueEdgeName();
+    std::string getUniqueNodeName();
+    std::string getUniqueTrainName();
+
     EdgeMap     m_edgeMap;
+    NodeMap     m_nodeMap;
     TrainMap    m_trainMap;
 };
 

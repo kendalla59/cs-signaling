@@ -59,13 +59,13 @@ static rrsim::eEnd enterAorB()
 static int cmdAddSegment()
 {
     EdgePtr eptr = sys().createEdge();
-    if (eptr) {
-        std::cout << "Added new track segment \""
-                << eptr->name() << "\"" << std::endl;
-        return 0;
+    if (!eptr) {
+        std::cout << "ERROR: Failed to add new track segment" << std::endl;
+        return EFAULT;
     }
-    std::cout << "ERROR: Failed to add new track segment" << std::endl;
-    return EFAULT;
+    std::cout << "Added new track segment \""
+              << eptr->name() << "\"" << std::endl;
+    return 0;
 }
 
 static int cmdConnectSegments()
@@ -89,7 +89,7 @@ static int cmdConnectSegments()
     EdgePtr eptr2 = sys().getEdge(resp2);
     if (!eptr2) {
         std::string rnum = nameFromNumber(resp2);
-        eptr2 = sys().getEdge(resp2);
+        eptr2 = sys().getEdge(rnum);
         if (!eptr2) {
             std::cout << "No such segment \"" << resp2 << "\"" << std::endl;
             return EINVAL;
@@ -110,16 +110,16 @@ static int cmdConnectSegments()
     }
     return 0;
 }
-/*
+
 static int cmdPlaceSignal()
 {
     std::string resp1 = enterName();
     if (resp1.empty()) { return 0; }
-    auto iter1 = g_edgeMap.find(resp1);
-    if (iter1 == g_edgeMap.end()) {
-        resp1 = nameFromNumber(resp1);
-        iter1 = g_edgeMap.find(resp1);
-        if (iter1 == g_edgeMap.end()) {
+    EdgePtr eptr = sys().getEdge(resp1);
+    if (!eptr) {
+        std::string rnum = nameFromNumber(resp1);
+        eptr = sys().getEdge(rnum);
+        if (!eptr) {
             std::cout << "No such segment \"" << resp1 << "\"" << std::endl;
             return EINVAL;
         }
@@ -127,9 +127,9 @@ static int cmdPlaceSignal()
     rrsim::eEnd end1 = enterAorB();
 
     try {
-        iter1->second->placeSignalLight(end1);
-        rrsim::RRsignal::updateAllSignals();
-        iter1->second->show(end1);
+        eptr->placeSignalLight(end1);
+        sys().updateAllSignals();
+        eptr->show();
     }
     catch (std::exception& ex) {
         std::cout << "ERROR: " << ex.what() << std::endl;
@@ -141,19 +141,14 @@ static int cmdPlaceSignal()
 
 static int cmdToggleSwitch()
 {
-    std::vector<Node*> junctions;
-    for (auto it: g_nodeMap) {
-        if (it.second->getNodeType() == rrsim::eJunction) {
-            junctions.push_back(it.second);
-        }
-    }
-    if (junctions.empty()) {
+    rrsim::NodeVec jctv = sys().getAllJunctions();
+    if (jctv.empty()) {
         std::cout << ">>> There are no junctions in the track network <<<"
                   << std::endl;
         return 0;
     }
     int jnum = 0;
-    for (auto it: junctions) {
+    for (auto it: jctv) {
         std::cout << ++jnum << ": " << it->name() << std::endl;
     }
     std::cout << "Enter junction (1.." << jnum << "): ";
@@ -163,15 +158,15 @@ static int cmdToggleSwitch()
         std::cout << "No entry, quitting function..." << std::endl;
         return 0;
     }
-    int val = std::atoi(numstr.c_str());
+    int val = std::stoi(numstr);
     if ((val < 1) || (val > jnum)) {
         std::cout << "No such junction" << std::endl;
         return EINVAL;
     }
     val--; // Make the index zero based.
-    junctions[val]->toggleSwitchPos();
-    std::cout << junctions[val]->name() << ": junction switch is ";
-    rrsim::eJSwitch jsw = junctions[val]->getSwitchPos();
+    jctv[val]->toggleSwitchPos();
+    std::cout << jctv[val]->name() << ": junction switch is ";
+    rrsim::eJSwitch jsw = jctv[val]->getSwitchPos();
     std::cout << ((jsw == rrsim::eSwitchLeft) ? "LEFT" : "RIGHT" ) << std::endl;
     return 0;
 
@@ -179,20 +174,10 @@ static int cmdToggleSwitch()
 
 static int cmdListSegments()
 {
-    try {
-        for (auto it: g_edgeMap) {
-            it.second->show();
-        }
-        std::cout << std::endl;
-        std::cout << "TOTAL: " << g_edgeMap.size() << " track segments" << std::endl;
-    }
-    catch (std::exception& ex) {
-        std::cout << "ERROR: " << ex.what() << std::endl;
-        return EFAULT;
-    }
-    return 0;
+    return sys().showEdges();
 }
 
+/*
 static int cmdShowConnections()
 {
     try {
@@ -383,17 +368,17 @@ int runCommandBuild()
         break;
     case 3:
         std::cout << "---------------- Place Signal Light ----------------" << std::endl;
-        //rc = cmdPlaceSignal();
+        rc = cmdPlaceSignal();
         std::cout << "----------------------------------------------------" << std::endl;
         break;
     case 4:
         std::cout << "-------------- Toggle Junction Switch --------------" << std::endl;
-        //rc = cmdToggleSwitch();
+        rc = cmdToggleSwitch();
         std::cout << "----------------------------------------------------" << std::endl;
         break;
     case 5:
         std::cout << "--------------- List Track Segments ----------------" << std::endl;
-        //rc = cmdListSegments();
+        rc = cmdListSegments();
         std::cout << "----------------------------------------------------" << std::endl;
         break;
     case 6:

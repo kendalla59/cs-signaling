@@ -12,36 +12,16 @@
 
 namespace rrsim {
 
-// This is the adjacency mapping for the entire graph of track segments.
-NodeMap g_nodeMap;
-
-Node::Node()
+Node::Node(const std::string& name) : m_name(name), m_switchState(eSwitchNone)
 {
-    m_name = getUniqueNodeName();
+    // Initialize edge ends as invalid.
     for (int ix = 0; ix < eNumSlots; ix++) {
-        m_slots[ix].eeEdge = nullptr;
         m_slots[ix].eeEnd = eNumEnds;
     }
-    m_switchState = eSwitchNone;
-
-    g_nodeMap.insert(NodePair(m_name, this));
-}
-
-Node::Node(const std::string& name)
-{
-    m_name = name;
-    for (int ix = 0; ix < eNumSlots; ix++) {
-        m_slots[ix].eeEdge = nullptr;
-        m_slots[ix].eeEnd = eNumEnds;
-    }
-    m_switchState = eSwitchLeft;
-
-    g_nodeMap.insert(NodePair(m_name, this));
 }
 
 Node::~Node()
 {
-    // Caller is responsible for updating g_nodeMap.
 }
 
 eNodeType Node::getNodeType()
@@ -130,13 +110,13 @@ EdgeEnd Node::getNext(eSlot slot)
 void Node::show()
 {
     std::stringstream nstr;
-    Edge* eptr;
+    EdgePtr eptr;
     nstr << std::setw(12) << std::right << m_name << ':';
 
     for (int ix = 0; ix < eNumSlots; ix++) {
         eptr = m_slots[ix].eeEdge;
         if (eptr) {
-            Node* next = eptr->getAdjacent(m_slots[ix].eeEnd).nsNode;
+            NodePtr next = eptr->getAdjacent(m_slots[ix].eeEnd).nsNode;
             if (next) {
                 if (ix > 0) { nstr << ','; }
                 nstr << std::setw(10) << next->name();
@@ -156,20 +136,6 @@ void Node::show()
         }
     }
     std::cout << nstr.str() << std::endl;
-}
-
-// Static method to determine the next unused name for a node.
-std::string Node::getUniqueNodeName()
-{
-    int ix = 1;
-    std::string name = "node001";
-    while (g_nodeMap.find(name) != g_nodeMap.end()) {
-        ix++;
-        std::stringstream ns;
-        ns << "node" << std::setw(3) << std::setfill('0') << ix;
-        name = ns.str();
-    }
-    return name;
 }
 
 } // namespace rrsim

@@ -57,8 +57,10 @@ enum eEnd {
 
 class Edge;
 class Node;
-using EdgePtr = std::shared_ptr<Edge>;
-using NodePtr = std::shared_ptr<Node>;
+class Train;
+using EdgePtr   = std::shared_ptr<Edge>;
+using NodePtr   = std::shared_ptr<Node>;
+using TrainPtr  = std::shared_ptr<Train>;
 
 struct NodeSlot {
     NodePtr nsNode;

@@ -12,7 +12,7 @@
 
 namespace rrsim {
 
-RRsignal::RRsignal(Edge* trackSeg, eEnd trackEnd) : m_isRed(true)
+RRsignal::RRsignal(EdgePtr trackSeg, eEnd trackEnd) : m_isRed(true)
 {
     m_edge.eeEdge = trackSeg;
     m_edge.eeEnd = trackEnd;
@@ -40,8 +40,8 @@ void RRsignal::updateSignal()
     node = edge.eeEdge->getNode((edge.eeEnd == eEndA) ? eEndB : eEndA);
 
     // Avoid infinite loops.
-    std::set<Edge*> visitedEdges;
-    visitedEdges.insert(edge.eeEdge);
+    std::set<std::string> visitedEdges;
+    visitedEdges.insert(edge.eeEdge->name());
 
     // Now assume we have a green light, unless we find an oncoming train.
     m_isRed = false;
@@ -49,28 +49,19 @@ void RRsignal::updateSignal()
     while (node.nsNode->getNodeType() != eJunction) {
         edge = node.nsNode->getNext(node.nsSlot);
         if (edge.eeEdge == nullptr) { return; }
-        if (visitedEdges.find(edge.eeEdge) != visitedEdges.end()) { return; }
-        visitedEdges.insert(edge.eeEdge);
+        if (visitedEdges.find(edge.eeEdge->name()) != visitedEdges.end()) {
+            // The track formed a loop before a junction was seen.
+            return;
+        }
+        visitedEdges.insert(edge.eeEdge->name());
 
-        Train* train = edge.eeEdge->getTrain();
+        TrainPtr train = edge.eeEdge->getTrain();
         if (train && (train->getPosition().eeEnd == edge.eeEnd)) {
             // The train is headed toward us.
             m_isRed = true;
             return;
         }
         node = edge.eeEdge->getNode((edge.eeEnd == eEndA) ? eEndB : eEndA);
-    }
-}
-
-void RRsignal::updateAllSignals()
-{
-    for (auto iter: g_edgeMap) {
-        if (iter.second) {
-            for (int ix = 0; ix < eNumEnds; ix++) {
-                RRsignal* sig = iter.second->getSignal((eEnd)ix);
-                if (sig) { sig->updateSignal(); }
-            }
-        }
     }
 }
 

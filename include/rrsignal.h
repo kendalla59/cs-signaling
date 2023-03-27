@@ -27,13 +27,11 @@ namespace rrsim {
 class RRsignal
 {
 public:
-    RRsignal(Edge* trackSeg, eEnd trackEnd);
+    RRsignal(EdgePtr trackSeg, eEnd trackEnd);
     ~RRsignal();
 
     void updateSignal();
     bool signalIsRed() { return m_isRed; }
-
-    static void updateAllSignals();
 
 private:
     bool        m_isRed;

@@ -15,18 +15,17 @@
 namespace rrsim {
 
 
-Train::Train()
+Train::Train(const std::string& name) : m_name(name)
 {
-    m_name = "train1";
-    m_edge.eeEdge = nullptr;
+    // Initialize edge end to an invalid value.
     m_edge.eeEnd = eNumEnds;
-    m_destination = nullptr;
 }
 
 Train::~Train()
 {
 }
 
+/*
 void Train::placeOnTrack(Edge* start, Edge* end)
 {
     if (m_edge.eeEdge) {
@@ -51,6 +50,7 @@ void Train::placeOnTrack(Edge* start, Edge* end)
 
     getOptimalRoute();
 }
+*/
 
 bool Train::stepSimulation()
 {
@@ -86,7 +86,7 @@ bool Train::stepSimulation()
                 }
                 m_edge.eeEdge = next.eeEdge;
                 m_edge.eeEnd = (next.eeEnd == eEndA) ? eEndB : eEndA;
-                m_edge.eeEdge->setTrain(this);
+                m_edge.eeEdge->setTrain(shared_from_this());
             }
         }
         break;
@@ -108,7 +108,7 @@ bool Train::stepSimulation()
                     }
                     m_edge.eeEdge = next.eeEdge;
                     m_edge.eeEnd = (next.eeEnd == eEndA) ? eEndB : eEndA;
-                    m_edge.eeEdge->setTrain(this);
+                    m_edge.eeEdge->setTrain(shared_from_this());
                     m_route.pop();
                 }
             }
@@ -127,7 +127,7 @@ bool Train::stepSimulation()
                     }
                     m_edge.eeEdge = next.eeEdge;
                     m_edge.eeEnd = (next.eeEnd == eEndA) ? eEndB : eEndA;
-                    m_edge.eeEdge->setTrain(this);
+                    m_edge.eeEdge->setTrain(shared_from_this());
                 }
             }
         }
@@ -145,7 +145,7 @@ bool Train::stepSimulation()
                     }
                     m_edge.eeEdge = next.eeEdge;
                     m_edge.eeEnd = (next.eeEnd == eEndA) ? eEndB : eEndA;
-                    m_edge.eeEdge->setTrain(this);
+                    m_edge.eeEdge->setTrain(shared_from_this());
                 }
             }
         }
@@ -193,8 +193,8 @@ static std::string getNodeSlotID(NodeSlot node)
 //
 void Train::getOptimalRoute()
 {
-    Edge* start = m_edge.eeEdge;
-    Edge* end = m_destination;
+    EdgePtr start = m_edge.eeEdge;
+    EdgePtr end = m_destination;
     if (!start || !end) {
         // Missing end(s), no route is possible.
         while (!m_route.empty()) { m_route.pop(); }
@@ -287,7 +287,7 @@ void Train::getOptimalRoute()
     // First, clear out anything on the route.
     while (!m_route.empty()) { m_route.pop(); }
 
-    Edge* from = end;
+    EdgePtr from = end;
     std::cout << "Route ends at edge: " << end->name() << std::endl;
     while (found) {
         node = found->node;

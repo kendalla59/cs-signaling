@@ -8,111 +8,23 @@
 #include "node.h"
 #include "rrsignal.h"
 #include "train.h"
+#include "system.h"
 #include <iostream>
 #include <sstream>
 #include <iomanip>
 
 namespace rrsim {
 
-Edge::Edge()
+Edge::Edge(const std::string& name) : m_name(name), m_weight(1.0)
 {
-    m_name = getUniqueEdgeName();
-    m_weight = 1.0; // TODO
+    // TODO: Weighted edges
 
-    NodePtr nodeA = std::make_shared<Node>();
-    NodePtr nodeB = std::make_shared<Node>();
-
-    EdgePtr eptr = std::make_shared<Edge>(this);
-
-    EdgeEnd edgeA = { eptr, eEndA };
-    nodeA->makeTerminator(edgeA);
-    EdgeEnd edgeB = { eptr, eEndB };
-    nodeB->makeTerminator(edgeB);
-
-    m_ends[eEndA].nsNode = nodeA;
-    m_ends[eEndA].nsSlot = eSlot1;
-
-    m_ends[eEndB].nsNode = nodeB;
-    m_ends[eEndB].nsSlot = eSlot1;
+    // Initialize node slots as invalid.
+    m_ends[eEndA].nsSlot = eNumSlots;
+    m_ends[eEndB].nsSlot = eNumSlots;
 
     m_signals[0] = nullptr;
     m_signals[1] = nullptr;
-
-    m_train = nullptr;
-
-}
-
-Edge::Edge(const std::string& serialStr) {
-    int slot;
-    std::string name;
-    std::string token;
-
-    EdgePtr eptr = std::make_shared<Edge>(this);
-    EdgeEnd edge = { eptr, eEndA };
-    Node* nptr;
-    size_t pos1 = 7;
-    size_t pos2 = serialStr.find(',', pos1);
-    name = serialStr.substr(pos1, pos2-pos1);
-    m_name = name;
-    std::cout << "Name: " << m_name;
-    pos1 = pos2 + 1;
-    pos2 = serialStr.find(',', pos1);
-    token = serialStr.substr(pos1, pos2-pos1);
-    m_weight = std::stod(token);
-    std::cout << " weight: " << m_weight;
-
-    // Node at the A side.
-    pos1 = pos2 + 1;
-    pos2 = serialStr.find(',', pos1);
-    name = serialStr.substr(pos1, pos2-pos1);
-    pos1 = pos2 + 1;
-    pos2 = serialStr.find(',', pos1);
-    token = serialStr.substr(pos1, pos2-pos1);
-    slot = std::stoi(token);
-    std::cout << " endA: " << name << "-" << slot;
-    auto itA = g_nodeMap.find(name);
-    if (itA == g_nodeMap.end()) { nptr = new Node(name); }
-    else                        { nptr = itA->second; }
-    edge.eeEnd = eEndA;
-    nptr->setEdgeEnd(edge, (eSlot)slot);
-    m_ends[eEndA].nsNode = nptr;
-    m_ends[eEndA].nsSlot = (eSlot)slot;
-
-    // Node at the B side.
-    pos1 = pos2 + 1;
-    pos2 = serialStr.find(',', pos1);
-    name = serialStr.substr(pos1, pos2-pos1);
-    pos1 = pos2 + 1;
-    pos2 = serialStr.find(',', pos1);
-    token = serialStr.substr(pos1, pos2-pos1);
-    slot = std::stoi(token);
-    std::cout << " endB: " << name << "-" << slot;
-    auto itB = g_nodeMap.find(name);
-    if (itB == g_nodeMap.end()) { nptr = new Node(name); }
-    else                        { nptr = itB->second; }
-    edge.eeEnd = eEndB;
-    nptr->setEdgeEnd(edge, (eSlot)slot);
-    m_ends[eEndB].nsNode = nptr;
-    m_ends[eEndB].nsSlot = (eSlot)slot;
-
-    // Signal lights.
-    m_signals[eEndA] = nullptr;
-    m_signals[eEndB] = nullptr;
-    pos1 = pos2 + 1;
-    pos2 = serialStr.find(',', pos1);
-    token = serialStr.substr(pos1, pos2-pos1);
-    if (token == "sigA:Y") {
-        std::cout << " sigA";
-        placeSignalLight(eEndA);
-    }
-    token = serialStr.substr(pos2 + 1);
-    if (token == "sigB:Y") {
-        std::cout << " sigB";
-        placeSignalLight(eEndB);
-    }
-    std::cout << std::endl;
-
-    m_train = nullptr;
 }
 
 Edge::~Edge()
@@ -122,79 +34,6 @@ Edge::~Edge()
             delete m_signals[ix];
             m_signals[ix] = nullptr;
         }
-    }
-    if (m_train) {
-        m_train->placeOnTrack(nullptr, nullptr);
-    }
-}
-
-void Edge::connectEdge(eEnd myEnd, Edge* other, eEnd toEnd)
-{
-    // If the other track is null, there is nothing more to do.
-    if (!other) { return; }
-
-    // Throw an exception if a track end is being connected to itself.
-    if (this == other) {
-        throw std::runtime_error("Cannot connect track segment to itself.");
-    }
-
-    NodeSlot cnctNode = getNode(myEnd);
-    NodeSlot rmovNode = other->getNode(toEnd);
-    NodeSlot replNode;
-
-    // Throw an exception if the end of the other track is
-    // not a terminator -- i.e., it must be unconnected.
-    if (rmovNode.nsNode->getNodeType() != eTerminator) {
-        throw std::runtime_error("Cannot connect if end of other is occupied");
-    }
-
-    EdgeEnd thisEdge = { this, myEnd };
-    EdgeEnd thatEdge = { other, toEnd };
-    EdgeEnd contEdge;
-
-    // Connect to the other track as implied by this track's connection.
-    switch (cnctNode.nsNode->getNodeType()) {
-    case eTerminator:
-        // This connection results in a continuation of this track to the other.
-        cnctNode.nsNode->makeContinuation(thatEdge);
-
-        // Replace the other edge's node slot entry.
-        replNode = { cnctNode.nsNode, eSlot2 };
-        other->m_ends[toEnd] = replNode;
-
-        // Now we can delete the node that we just replaced.
-        g_nodeMap.erase(rmovNode.nsNode->name());
-        delete rmovNode.nsNode;
-        break;
-
-    case eContinuation:
-        // Make sure the currently connected track is not also the track
-        // we are trying using to form a junction.
-        contEdge = cnctNode.nsNode->getNext(cnctNode.nsSlot);
-        if (contEdge.eeEdge == other) {
-            throw std::runtime_error("Attempt to connect same edge as junction");
-        }
-
-        // This connection results in a junction from this track to the
-        // currently connected track (left) or to the new track (right).
-        cnctNode.nsNode->makeJunction(thatEdge);
-
-        // Replace the other edge's node slot entry.
-        replNode = { cnctNode.nsNode, eSlot3 };
-        other->m_ends[toEnd] = replNode;
-
-        // Now we can delete the node that we just replaced.
-        g_nodeMap.erase(rmovNode.nsNode->name());
-        delete rmovNode.nsNode;
-        break;
-
-    // Throw exceptions if connection criteria are violated.
-    case eJunction:
-        // We cannot connect any more tracks to this end.
-        throw std::runtime_error("Attempt to connect to a junction");
-
-    default:
-        throw std::runtime_error("Unexpected node type in connectEdge");
     }
 }
 
@@ -214,7 +53,8 @@ void Edge::placeSignalLight(eEnd myEnd)
     if (m_signals[myEnd]) {
         throw std::runtime_error("Signal has already been placed here");
     }
-    m_signals[myEnd] = new RRsignal(this, myEnd);
+    EdgePtr eptr = shared_from_this();
+    m_signals[myEnd] = new RRsignal(eptr, myEnd);
 }
 
 NodeSlot Edge::getNode(eEnd getEnd)
@@ -356,13 +196,76 @@ std::string Edge::serialize()
     return ss.str();
 }
 
-// Static method to determine the next unused name for an edge.
-std::string Edge::getUniqueEdgeName()
+void Edge::deserialize(const std::string& serialStr)
 {
-    int ix = g_edgeMap.size() + 1;
-    std::stringstream ns;
-    ns << "tseg" << std::setw(3) << std::setfill('0') << ix;
-    return ns.str();
+    int slot;
+    std::string name;
+    std::string token;
+    NodePtr nptr;
+
+    EdgePtr eptr = shared_from_this();
+    EdgeEnd edge = { eptr, eEndA };
+    size_t pos1 = 7;
+    size_t pos2 = serialStr.find(',', pos1);
+    name = serialStr.substr(pos1, pos2-pos1);
+    m_name = name;
+    std::cout << "Name: " << m_name;
+    pos1 = pos2 + 1;
+    pos2 = serialStr.find(',', pos1);
+    token = serialStr.substr(pos1, pos2-pos1);
+    m_weight = std::stod(token);
+    std::cout << " weight: " << m_weight;
+
+    // Node at the A side.
+    pos1 = pos2 + 1;
+    pos2 = serialStr.find(',', pos1);
+    name = serialStr.substr(pos1, pos2-pos1);
+    pos1 = pos2 + 1;
+    pos2 = serialStr.find(',', pos1);
+    token = serialStr.substr(pos1, pos2-pos1);
+    slot = std::stoi(token);
+    std::cout << " endA: " << name << "-" << slot;
+    nptr = sys().getNode(name);
+    if (!nptr) { nptr = sys().createNode(name); }
+    edge.eeEnd = eEndA;
+    nptr->setEdgeEnd(edge, (eSlot)slot);
+    m_ends[eEndA].nsNode = nptr;
+    m_ends[eEndA].nsSlot = (eSlot)slot;
+
+    // Node at the B side.
+    pos1 = pos2 + 1;
+    pos2 = serialStr.find(',', pos1);
+    name = serialStr.substr(pos1, pos2-pos1);
+    pos1 = pos2 + 1;
+    pos2 = serialStr.find(',', pos1);
+    token = serialStr.substr(pos1, pos2-pos1);
+    slot = std::stoi(token);
+    std::cout << " endB: " << name << "-" << slot;
+    nptr = sys().getNode(name);
+    if (!nptr) { nptr = sys().createNode(name); }
+    edge.eeEnd = eEndB;
+    nptr->setEdgeEnd(edge, (eSlot)slot);
+    m_ends[eEndB].nsNode = nptr;
+    m_ends[eEndB].nsSlot = (eSlot)slot;
+
+    // Signal lights.
+    m_signals[eEndA] = nullptr;
+    m_signals[eEndB] = nullptr;
+    pos1 = pos2 + 1;
+    pos2 = serialStr.find(',', pos1);
+    token = serialStr.substr(pos1, pos2-pos1);
+    if (token == "sigA:Y") {
+        std::cout << " sigA";
+        placeSignalLight(eEndA);
+    }
+    token = serialStr.substr(pos2 + 1);
+    if (token == "sigB:Y") {
+        std::cout << " sigB";
+        placeSignalLight(eEndB);
+    }
+    std::cout << std::endl;
+
+    m_train = nullptr;
 }
 
 } // namespace rrsim

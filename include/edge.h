@@ -27,6 +27,7 @@
 #define _CS_EDGE_H_
 
 #include "common.h"
+#include "system.h"
 #include <string>
 #include <map>
 
@@ -41,20 +42,17 @@ class Train;
 //     It acts as the edge between nodes in the graph of
 //     of the track network.
 
-class Edge
+class Edge : public std::enable_shared_from_this<Edge>
 {
 public:
-    Edge();
-    Edge(const std::string& serialStr);
+    Edge(const std::string& name);
     ~Edge();
-
-    void connectEdge(eEnd myEnd, Edge* other, eEnd toEnd);
 
     RRsignal* getSignal(eEnd myEnd);
     void placeSignalLight(eEnd myEnd);
 
-    Train* getTrain() { return m_train; }
-    void setTrain(Train* train) { m_train = train; }
+    TrainPtr getTrain() { return m_train; }
+    void setTrain(TrainPtr train) { m_train = train; }
 
     NodeSlot getNode(eEnd getEnd);
     NodeSlot getAdjacent(eEnd getEnd);
@@ -65,17 +63,14 @@ public:
     void show(eEnd showEnd = eNumEnds);
 
     std::string serialize();
-
-    // This static method returns an edge name of the pattern "tsegNNN"
-    // that is not currently in the global edge map.
-    static std::string getUniqueEdgeName();
+    void deserialize(const std::string& serialStr);
 
 private:
     std::string     m_name;
     double          m_weight;
     NodeSlot        m_ends[eNumEnds];
     RRsignal*       m_signals[eNumEnds];
-    Train*          m_train;
+    TrainPtr        m_train;
 };
 
 } // namespace rrsim

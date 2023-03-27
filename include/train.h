@@ -27,13 +27,11 @@ namespace rrsim {
 
 using Route = std::stack<eJSwitch>;
 
-class Train
+class Train : public std::enable_shared_from_this<Train>
 {
 public:
-    Train();
+    Train(const std::string& name);
     ~Train();
-
-    void placeOnTrack(Edge* start, Edge* end);
 
     // Returns false when the train has reached a terminator.
     bool stepSimulation();
@@ -50,7 +48,7 @@ private:
 
     std::string m_name;
     EdgeEnd     m_edge;
-    Edge*       m_destination;
+    EdgePtr     m_destination;
     Route       m_route;
 };
 

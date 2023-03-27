@@ -35,7 +35,6 @@ namespace rrsim {
 class Node
 {
 public:
-    Node();
     Node(const std::string& name);
     ~Node();
 
@@ -69,18 +68,14 @@ public:
 
     const std::string& name() { return m_name; }
 
-    eJSwitch getSwitchPos() { return m_switchState; }
-    void setSwitchPos(eJSwitch jsw) { m_switchState = jsw; }
-    void toggleSwitchPos() {
+    eJSwitch    getSwitchPos()              { return m_switchState; }
+    void        setSwitchPos(eJSwitch jsw)  { m_switchState = jsw; }
+    void        toggleSwitchPos() {
         m_switchState = (m_switchState == eSwitchLeft) ? eSwitchRight
                                                        : eSwitchLeft;
     }
 
     void show();
-
-    // This static method returns a node name of the pattern "nodeNNN"
-    // that is not currently in the global node map.
-    static std::string getUniqueNodeName();
 
 private:
     std::string     m_name;
