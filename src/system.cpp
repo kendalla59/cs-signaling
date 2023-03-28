@@ -181,6 +181,27 @@ int System::connectSegments(const EdgeEnd& s1, const EdgeEnd& s2)
     return 0;
 }
 
+int System::stepSimulation()
+{
+    try {
+        for (auto iter: m_trainMap) {
+            TrainPtr tptr = iter.second;
+            bool chk = tptr->stepSimulation();
+            updateAllSignals();
+            tptr->show();
+            if (!chk) {
+                std::cout << ">>> The Simulation Is Complete : "
+                          << tptr->name() << " <<<" << std::endl;
+            }
+        }
+    }
+    catch (std::exception& ex) {
+        std::cout << "ERROR: " << ex.what() << std::endl;
+        return EFAULT;
+    }
+    return 0;
+}
+
 int System::showEdges()
 {
     try {
@@ -190,6 +211,20 @@ int System::showEdges()
         std::cout << std::endl
                   << "TOTAL: " << m_edgeMap.size() << " track segments"
                   << std::endl;
+    }
+    catch (std::exception& ex) {
+        std::cout << "ERROR: " << ex.what() << std::endl;
+        return EFAULT;
+    }
+    return 0;
+}
+
+int System::showNodes()
+{
+    try {
+        for (auto iter: m_nodeMap) {
+            iter.second->show();
+        }
     }
     catch (std::exception& ex) {
         std::cout << "ERROR: " << ex.what() << std::endl;
@@ -223,102 +258,55 @@ NodeVec System::getAllJunctions()
     return rval;
 }
 
-/*
-int System::cmdConnectSegments(const EdgeEnd& s1, const EdgeEnd& s2)
+int System::serialize(std::ofstream& ofstr)
 {
     try {
-        iter1->second->connectEdge(end1, iter2->second, end2);
-        iter1->second->show(end1);
-    }
-    catch(std::exception& ex) {
-        std::cout << "ERROR: " << ex.what() << std::endl;
-        return EBUSY;
-    }
-    return 0;
-}
-
-static int cmdPlaceSignal()
-{
-    std::string resp1 = enterName();
-    if (resp1.empty()) { return 0; }
-    auto iter1 = g_edgeMap.find(resp1);
-    if (iter1 == g_edgeMap.end()) {
-        resp1 = nameFromNumber(resp1);
-        iter1 = g_edgeMap.find(resp1);
-        if (iter1 == g_edgeMap.end()) {
-            std::cout << "No such segment \"" << resp1 << "\"" << std::endl;
-            return EINVAL;
+        for (auto iter: m_edgeMap) {
+            EdgePtr edge = iter.second;
+            if (edge) {
+                ofstr << edge->serialize();
+            }
         }
-    }
-    rrsim::eEnd end1 = enterAorB();
-
-    try {
-        iter1->second->placeSignalLight(end1);
-        rrsim::RRsignal::updateAllSignals();
-        iter1->second->show(end1);
     }
     catch (std::exception& ex) {
         std::cout << "ERROR: " << ex.what() << std::endl;
-        return EFAULT;
-    }
-
-    return 0;
-}
-
-static int cmdToggleSwitch()
-{
-    std::vector<Node*> junctions;
-    for (auto it: g_nodeMap) {
-        if (it.second->getNodeType() == rrsim::eJunction) {
-            junctions.push_back(it.second);
-        }
-    }
-    if (junctions.empty()) {
-        std::cout << ">>> There are no junctions in the track network <<<"
-                  << std::endl;
-        return 0;
-    }
-    int jnum = 0;
-    for (auto it: junctions) {
-        std::cout << ++jnum << ": " << it->name() << std::endl;
-    }
-    std::cout << "Enter junction (1.." << jnum << "): ";
-    std::string numstr;
-    std::getline(std::cin, numstr);
-    if (numstr.empty()) {
-        std::cout << "No entry, quitting function..." << std::endl;
-        return 0;
-    }
-    int val = std::atoi(numstr.c_str());
-    if ((val < 1) || (val > jnum)) {
-        std::cout << "No such junction" << std::endl;
         return EINVAL;
     }
-    val--; // Make the index zero based.
-    junctions[val]->toggleSwitchPos();
-    std::cout << junctions[val]->name() << ": junction switch is ";
-    rrsim::eJSwitch jsw = junctions[val]->getSwitchPos();
-    std::cout << ((jsw == rrsim::eSwitchLeft) ? "LEFT" : "RIGHT" ) << std::endl;
     return 0;
-
 }
 
-static int cmdListSegments()
+int System::deserialize(std::ifstream& ifstr)
 {
+    // Clear out the existing network.
+    resetTrackNetwork();
+
+    // Load the previously saved network.
+    std::string segment;
     try {
-        for (auto it: g_edgeMap) {
-            it.second->show();
+        while (!ifstr.eof()) {
+            std::getline(ifstr, segment);
+            if (segment.empty()) continue;
+            size_t pos1 = 7;
+            if (segment.substr(0, pos1) != "track: ") {
+                throw std::runtime_error("Serialized string preamble missing");
+            }
+            size_t pos2 = segment.find(',', pos1);
+            std::string name = segment.substr(pos1, pos2-pos1);
+            EdgePtr eptr = std::make_shared<Edge>(name);
+            m_edgeMap.insert(EdgeItem(eptr->name(), eptr));
+            eptr->deserialize(segment);
         }
-        std::cout << std::endl;
-        std::cout << "TOTAL: " << g_edgeMap.size() << " track segments" << std::endl;
+        updateAllSignals();
     }
     catch (std::exception& ex) {
         std::cout << "ERROR: " << ex.what() << std::endl;
+        std::cout << "segment: \"" << segment << "\"" << std::endl;
         return EFAULT;
     }
     return 0;
 }
 
+/*
 static int cmdShowConnections()
 {
     try {
@@ -390,83 +378,6 @@ static int cmdStepSimulation()
         return EFAULT;
     }
 
-    return 0;
-}
-
-static int cmdSaveNetwork()
-{
-    std::string path;
-    std::cout << "Enter file path: ";
-    std::getline(std::cin, path);
-    if (path.empty()) {
-        std::cout << "No response, quitting..." << std::endl;
-        return 0;
-    }
-    std::ifstream ifstr(path);
-    if (ifstr.good()) {
-        std::cout << path << " exists. Replace contents? [y/n] ";
-        std::string resp;
-        std::getline(std::cin, resp);
-        if ((resp != "Y") && (resp != "y")) {
-            std::cout << "NOT replacing contents. quitting..." << std::endl;
-            return 0;
-        }
-    }
-    ifstr.close();
-    std::ofstream ofstr(path, std::ofstream::trunc);
-    if (!ofstr.good()) {
-        std::cout << "Unable to open file " << path << ", quitting..." << std::endl;
-        return 0;
-    }
-    for (auto iter: g_edgeMap) {
-        Edge* edge = iter.second;
-        if (edge) {
-            ofstr << edge->serialize();
-        }
-    }
-    ofstr.close();
-    return 0;
-}
-
-static int cmdLoadNetwork()
-{
-    if (!g_edgeMap.empty()) {
-        std::cout << "WARNING: This will delete the existing network" << std::endl;
-        std::cout << "         Press ENTER key at the prompt to quit" << std::endl;
-    }
-    std::string path;
-    std::cout << "Enter file path: ";
-    std::getline(std::cin, path);
-    if (path.empty()) {
-        std::cout << "No response, quitting..." << std::endl;
-        return 0;
-    }
-    std::ifstream ifstr(path);
-    if (!ifstr.good()) {
-        std::cout << path << " not found, quitting..." << std::endl;
-        return ENOENT;
-    }
-    // Clear out the existing network.
-    resetTrackNetwork();
-
-    // Load the previously saved network.
-    std::string segment;
-    try {
-        while (!ifstr.eof()) {
-            std::getline(ifstr, segment);
-            if (segment.empty()) continue;
-            if (segment.substr(0, 7) != "track: ") {
-                throw std::runtime_error("Serialized string preamble missing");
-            }
-            new Edge(segment);
-        }
-        rrsim::RRsignal::updateAllSignals();
-    }
-    catch (std::exception& ex) {
-        std::cout << "ERROR: " << ex.what() << std::endl;
-        std::cout << "segment: \"" << segment << "\"" << std::endl;
-        return EFAULT;
-    }
     return 0;
 }
 */

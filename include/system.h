@@ -16,6 +16,7 @@
 #include <map>
 #include <memory>
 #include <vector>
+#include <fstream>
 
 namespace rrsim {
 
@@ -37,7 +38,8 @@ public:
 
     static const std::string emptyStr;
 
-    void resetTrackNetwork();
+    void        resetTrackNetwork();
+    int         edgeCount() { return m_edgeMap.size(); }
 
     EdgePtr     createEdge(const std::string& name = emptyStr);
     EdgePtr     getEdge(const std::string& name);
@@ -52,10 +54,14 @@ public:
     void        removeTrain(const std::string& name);
 
     int         connectSegments(const EdgeEnd& s1, const EdgeEnd& s2);
+    int         stepSimulation();
     int         showEdges();
+    int         showNodes();
 
     void        updateAllSignals();
     NodeVec     getAllJunctions();
+    int         serialize(std::ofstream& ofstr);
+    int         deserialize(std::ifstream& ifstr);
 
     // Disallow copying the System singleton.
     System(System const&)           = delete;

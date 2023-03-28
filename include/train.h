@@ -33,12 +33,13 @@ public:
     Train(const std::string& name);
     ~Train();
 
-    // Returns false when the train has reached a terminator.
-    bool stepSimulation();
-
     EdgeEnd getPosition() { return m_edge; }
+    void placeOnTrack(EdgePtr start, EdgePtr end);
 
     const std::string& name() { return m_name; }
+
+    // Returns false when the train has reached a terminator.
+    bool stepSimulation();
 
     void show();
 

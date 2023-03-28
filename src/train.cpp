@@ -25,8 +25,7 @@ Train::~Train()
 {
 }
 
-/*
-void Train::placeOnTrack(Edge* start, Edge* end)
+void Train::placeOnTrack(EdgePtr start, EdgePtr end)
 {
     if (m_edge.eeEdge) {
         // Remove the train from its current track segment.
@@ -43,14 +42,13 @@ void Train::placeOnTrack(Edge* start, Edge* end)
         throw std::runtime_error(
                 "A train is already on segment: " + start->name());
     }
-    start->setTrain(this);
+    start->setTrain(shared_from_this());
     m_edge.eeEdge = start;
     m_edge.eeEnd = eEndB; // getOptimalRoute determines the final value.
     m_destination = end;
 
     getOptimalRoute();
 }
-*/
 
 bool Train::stepSimulation()
 {
@@ -115,7 +113,9 @@ bool Train::stepSimulation()
         }
         else if (node.nsSlot == eSlot2) {
             if (jsw != eSwitchLeft) {
-                node.nsNode->setSwitchPos(eSwitchLeft);
+                if (!node.nsNode->getEdgeEnd(eSlot1).eeEdge->getTrain()) {
+                    node.nsNode->setSwitchPos(eSwitchLeft);
+                }
             }
             else if (advance) {
                 next = node.nsNode->getEdgeEnd(eSlot1);
@@ -133,7 +133,10 @@ bool Train::stepSimulation()
         }
         else if (node.nsSlot == eSlot3) {
             if (jsw != eSwitchRight) {
-                node.nsNode->setSwitchPos(eSwitchRight);
+                if (!node.nsNode->getEdgeEnd(eSlot1).eeEdge->getTrain() &&
+                    !node.nsNode->getEdgeEnd(eSlot2).eeEdge->getTrain()) {
+                    node.nsNode->setSwitchPos(eSwitchRight);
+                }
             }
             else if (advance) {
                 next = node.nsNode->getEdgeEnd(eSlot1);

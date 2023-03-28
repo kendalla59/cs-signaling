@@ -208,7 +208,9 @@ void Edge::deserialize(const std::string& serialStr)
     size_t pos1 = 7;
     size_t pos2 = serialStr.find(',', pos1);
     name = serialStr.substr(pos1, pos2-pos1);
-    m_name = name;
+    if (name != m_name) {
+        throw std::runtime_error("deserialize " + m_name + " != " + name);
+    }
     std::cout << "Name: " << m_name;
     pos1 = pos2 + 1;
     pos2 = serialStr.find(',', pos1);
@@ -229,6 +231,7 @@ void Edge::deserialize(const std::string& serialStr)
     if (!nptr) { nptr = sys().createNode(name); }
     edge.eeEnd = eEndA;
     nptr->setEdgeEnd(edge, (eSlot)slot);
+    if (slot == eSlot3) { nptr->setSwitchPos(eSwitchLeft); }
     m_ends[eEndA].nsNode = nptr;
     m_ends[eEndA].nsSlot = (eSlot)slot;
 
@@ -245,6 +248,7 @@ void Edge::deserialize(const std::string& serialStr)
     if (!nptr) { nptr = sys().createNode(name); }
     edge.eeEnd = eEndB;
     nptr->setEdgeEnd(edge, (eSlot)slot);
+    if (slot == eSlot3) { nptr->setSwitchPos(eSwitchLeft); }
     m_ends[eEndB].nsNode = nptr;
     m_ends[eEndB].nsSlot = (eSlot)slot;
 

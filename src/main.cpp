@@ -12,7 +12,6 @@
 #include "system.h"
 #include "config.h"
 #include <iostream>
-#include <fstream>
 #include <sstream>
 #include <iomanip>
 #include <map>
@@ -56,6 +55,7 @@ static rrsim::eEnd enterAorB()
     }
     return rval;
 }
+
 static int cmdAddSegment()
 {
     EdgePtr eptr = sys().createEdge();
@@ -168,6 +168,8 @@ static int cmdToggleSwitch()
     std::cout << jctv[val]->name() << ": junction switch is ";
     rrsim::eJSwitch jsw = jctv[val]->getSwitchPos();
     std::cout << ((jsw == rrsim::eSwitchLeft) ? "LEFT" : "RIGHT" ) << std::endl;
+
+    sys().updateAllSignals();
     return 0;
 
 }
@@ -177,31 +179,37 @@ static int cmdListSegments()
     return sys().showEdges();
 }
 
-/*
 static int cmdShowConnections()
 {
-    try {
-        for (auto it: g_nodeMap) {
-            it.second->show();
-        }
-    }
-    catch (std::exception& ex) {
-        std::cout << "ERROR: " << ex.what() << std::endl;
-        return EFAULT;
-    }
-    return 0;
+    return sys().showNodes();
 }
 
 static int cmdPlaceTrain()
 {
+    TrainPtr tptr;
+    std::cout << "Enter train name (RETURN to create new): ";
+    std::string resp;
+    std::getline(std::cin, resp);
+    if (resp.empty()) {
+        tptr = sys().createTrain();
+        std::cout << "Placing new train \""
+                  << tptr->name() << "\":" << std::endl;
+    }
+    else {
+        tptr = sys().getTrain(resp);
+        if (!tptr) {
+            std::cout << "No such train: \"" << resp << "\"" << std::endl;
+            return EINVAL;
+        }
+    }
     std::cout << "Starting - ";
     std::string resp1 = enterName();
     if (resp1.empty()) { return 0; }
-    auto iter1 = g_edgeMap.find(resp1);
-    if (iter1 == g_edgeMap.end()) {
-        resp1 = nameFromNumber(resp1);
-        iter1 = g_edgeMap.find(resp1);
-        if (iter1 == g_edgeMap.end()) {
+    EdgePtr eptr1 = sys().getEdge(resp1);
+    if (!eptr1) {
+        std::string rnum = nameFromNumber(resp1);
+        eptr1 = sys().getEdge(rnum);
+        if (!eptr1) {
             std::cout << "No such segment \"" << resp1 << "\"" << std::endl;
             return EINVAL;
         }
@@ -209,22 +217,22 @@ static int cmdPlaceTrain()
     std::cout << "Ending - ";
     std::string resp2 = enterName();
     if (resp2.empty()) { return 0; }
-    auto iter2 = g_edgeMap.find(resp2);
-    if (iter2 == g_edgeMap.end()) {
-        resp2 = nameFromNumber(resp2);
-        iter2 = g_edgeMap.find(resp2);
-        if (iter2 == g_edgeMap.end()) {
+    EdgePtr eptr2 = sys().getEdge(resp2);
+    if (!eptr2) {
+        std::string rnum = nameFromNumber(resp2);
+        eptr2 = sys().getEdge(rnum);
+        if (!eptr2) {
             std::cout << "No such segment \"" << resp2 << "\"" << std::endl;
             return EINVAL;
         }
     }
 
     try {
-        rrsim::EdgeEnd edge = g_train.getPosition();
+        rrsim::EdgeEnd edge = tptr->getPosition();
         if (edge.eeEdge) { edge.eeEdge->setTrain(nullptr); }
-        g_train.placeOnTrack(iter1->second, iter2->second);
-        rrsim::RRsignal::updateAllSignals();
-        g_train.show();
+        tptr->placeOnTrack(eptr1, eptr2);
+        sys().updateAllSignals();
+        tptr->show();
     }
     catch (std::exception& ex) {
         std::cout << "ERROR: " << ex.what() << std::endl;
@@ -236,20 +244,7 @@ static int cmdPlaceTrain()
 
 static int cmdStepSimulation()
 {
-    try {
-        bool chk = g_train.stepSimulation();
-        rrsim::RRsignal::updateAllSignals();
-        g_train.show();
-        if (!chk) {
-            std::cout << ">>> The Simulation Is Complete <<<" << std::endl;
-        }
-    }
-    catch (std::exception& ex) {
-        std::cout << "ERROR: " << ex.what() << std::endl;
-        return EFAULT;
-    }
-
-    return 0;
+    return sys().stepSimulation();
 }
 
 static int cmdSaveNetwork()
@@ -277,21 +272,16 @@ static int cmdSaveNetwork()
         std::cout << "Unable to open file " << path << ", quitting..." << std::endl;
         return 0;
     }
-    for (auto iter: g_edgeMap) {
-        Edge* edge = iter.second;
-        if (edge) {
-            ofstr << edge->serialize();
-        }
-    }
+    int rc = sys().serialize(ofstr);
     ofstr.close();
-    return 0;
+    return rc;
 }
 
 static int cmdLoadNetwork()
 {
-    if (!g_edgeMap.empty()) {
+    if (sys().edgeCount() != 0) {
         std::cout << "WARNING: This will delete the existing network" << std::endl;
-        std::cout << "         Press ENTER key at the prompt to quit" << std::endl;
+        std::cout << "         Press RETURN key at the prompt to quit" << std::endl;
     }
     std::string path;
     std::cout << "Enter file path: ";
@@ -305,30 +295,12 @@ static int cmdLoadNetwork()
         std::cout << path << " not found, quitting..." << std::endl;
         return ENOENT;
     }
-    // Clear out the existing network.
-    resetTrackNetwork();
 
-    // Load the previously saved network.
-    std::string segment;
-    try {
-        while (!ifstr.eof()) {
-            std::getline(ifstr, segment);
-            if (segment.empty()) continue;
-            if (segment.substr(0, 7) != "track: ") {
-                throw std::runtime_error("Serialized string preamble missing");
-            }
-            new Edge(segment);
-        }
-        rrsim::RRsignal::updateAllSignals();
-    }
-    catch (std::exception& ex) {
-        std::cout << "ERROR: " << ex.what() << std::endl;
-        std::cout << "segment: \"" << segment << "\"" << std::endl;
-        return EFAULT;
-    }
-    return 0;
+    int rc = sys().deserialize(ifstr);
+    ifstr.close();
+    return rc;
 }
-*/
+
 int runCommandBuild()
 {
     int rc;
@@ -383,12 +355,12 @@ int runCommandBuild()
         break;
     case 6:
         std::cout << "---------------- Save Track Network ----------------" << std::endl;
-        //rc = cmdSaveNetwork();
+        rc = cmdSaveNetwork();
         std::cout << "----------------------------------------------------" << std::endl;
         break;
     case 7:
         std::cout << "---------------- Load Track Network ----------------" << std::endl;
-        //rc = cmdLoadNetwork();
+        rc = cmdLoadNetwork();
         std::cout << "----------------------------------------------------" << std::endl;
         break;
     default:
@@ -434,22 +406,22 @@ int runCommand()
         break;
     case 2:
         std::cout << "--------------- List Track Segments ----------------" << std::endl;
-        //rc = cmdListSegments();
+        rc = cmdListSegments();
         std::cout << "----------------------------------------------------" << std::endl;
         break;
     case 3:
         std::cout << "----------------- Show Connections -----------------" << std::endl;
-        //rc = cmdShowConnections();
+        rc = cmdShowConnections();
         std::cout << "----------------------------------------------------" << std::endl;
         break;
     case 4:
         std::cout << "--------------- Place Train On Track ---------------" << std::endl;
-        //rc = cmdPlaceTrain();
+        rc = cmdPlaceTrain();
         std::cout << "----------------------------------------------------" << std::endl;
         break;
     case 5:
         std::cout << "----------------- Step Simulation ------------------" << std::endl;
-        //rc = cmdStepSimulation();
+        rc = cmdStepSimulation();
         std::cout << "----------------------------------------------------" << std::endl;
         break;
     default:
