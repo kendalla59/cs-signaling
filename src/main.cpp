@@ -229,7 +229,8 @@ static int cmdPlaceTrain()
 
     try {
         rrsim::EdgeEnd edge = tptr->getPosition();
-        if (edge.eeEdge) { edge.eeEdge->setTrain(nullptr); }
+        EdgePtr eptr = edge.eeEdge.lock();
+        if (eptr) { eptr->setTrain(nullptr); }
         tptr->placeOnTrack(eptr1, eptr2);
         sys().updateAllSignals();
         tptr->show();
@@ -383,7 +384,7 @@ int runCommand()
             "2. List track segments"                        << std::endl <<
             "3. Show track connections"                     << std::endl <<
             "4. Place train on a track segment"             << std::endl <<
-            "5. Step the train simulation"                  << std::endl <<
+            "5. [S]tep the train simulation"                << std::endl <<
             "Q/quit/exit"                                   << std::endl;
 
     std::string resp;
@@ -395,7 +396,8 @@ int runCommand()
         return 1;
     }
     int cmd;
-    try { cmd = std::stoi(resp); } catch (...) { cmd = 0; }
+    if (resp == "S" || resp == "s") { cmd = 5; } // Special case for "step".
+    else { try { cmd = std::stoi(resp); } catch (...) { cmd = 0; } }
 
     switch (cmd) {
     case 1:

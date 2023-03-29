@@ -49,7 +49,7 @@ private:
 
     std::string m_name;
     EdgeEnd     m_edge;
-    EdgePtr     m_destination;
+    EdgeRef     m_destination;
     Route       m_route;
 };
 

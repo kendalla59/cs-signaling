@@ -27,11 +27,12 @@ Train::~Train()
 
 void Train::placeOnTrack(EdgePtr start, EdgePtr end)
 {
-    if (m_edge.eeEdge) {
+    EdgePtr eptr = m_edge.eeEdge.lock();
+    if (eptr) {
         // Remove the train from its current track segment.
-        m_edge.eeEdge->setTrain(nullptr);
-        m_edge.eeEdge = nullptr;
-        m_destination = nullptr;
+        eptr->setTrain(nullptr);
+        m_edge.eeEdge.reset();
+        m_destination.reset();
     }
     while (!m_route.empty()) { m_route.pop(); }
 
@@ -52,21 +53,24 @@ void Train::placeOnTrack(EdgePtr start, EdgePtr end)
 
 bool Train::stepSimulation()
 {
+    EdgePtr eptr = m_edge.eeEdge.lock();
+
     // Nothing to do if we are not on a track segment.
-    if (m_edge.eeEdge == nullptr) { return false; }
+    if (!eptr) { return false; }
 
     // Nothing to do if we are at the destination.
-    if (m_edge.eeEdge == m_destination) { return false; }
+    if (eptr == m_destination.lock()) { return false; }
 
     EdgeEnd next;
+    EdgePtr nexp;
     eJSwitch jsw;
 
     // Do not advance the train if the signal is red.
     bool advance = true;
-    RRsignal * light = m_edge.eeEdge->getSignal(m_edge.eeEnd);
+    RRsignal * light = eptr->getSignal(m_edge.eeEnd);
     if (light && light->signalIsRed()) { advance = false; }
 
-    NodeSlot node = m_edge.eeEdge->getNode(m_edge.eeEnd);
+    NodeSlot node = eptr->getNode(m_edge.eeEnd);
     switch (node.nsNode->getNodeType()) {
     default:
     case eEmpty: // TODO: throw exception?
@@ -76,15 +80,16 @@ bool Train::stepSimulation()
         if (advance) {
             next = node.nsNode->getEdgeEnd(
                     (node.nsSlot == eSlot1) ? eSlot2 : eSlot1);
-            if (next.eeEdge) {
-                m_edge.eeEdge->setTrain(nullptr);
-                if (next.eeEdge->getTrain()) {
-                    m_edge.eeEdge = nullptr;
+            nexp = next.eeEdge.lock();
+            if (nexp) {
+                eptr->setTrain(nullptr);
+                if (nexp->getTrain()) {
+                    m_edge.eeEdge.reset();
                     throw std::runtime_error("Train collision detected!");
                 }
                 m_edge.eeEdge = next.eeEdge;
                 m_edge.eeEnd = (next.eeEnd == eEndA) ? eEndB : eEndA;
-                m_edge.eeEdge->setTrain(shared_from_this());
+                nexp->setTrain(shared_from_this());
             }
         }
         break;
@@ -98,57 +103,64 @@ bool Train::stepSimulation()
             else if (advance) {
                 next = node.nsNode->getEdgeEnd(
                         (jsw == eSwitchLeft) ? eSlot2 : eSlot3);
-                if (next.eeEdge) {
-                    m_edge.eeEdge->setTrain(nullptr);
-                    if (next.eeEdge->getTrain()) {
-                        m_edge.eeEdge = nullptr;
+                nexp = next.eeEdge.lock();
+                if (nexp) {
+                    eptr->setTrain(nullptr);
+                    if (nexp->getTrain()) {
+                        m_edge.eeEdge.reset();
                         throw std::runtime_error("Train collision detected!");
                     }
                     m_edge.eeEdge = next.eeEdge;
                     m_edge.eeEnd = (next.eeEnd == eEndA) ? eEndB : eEndA;
-                    m_edge.eeEdge->setTrain(shared_from_this());
+                    nexp->setTrain(shared_from_this());
                     m_route.pop();
                 }
             }
         }
         else if (node.nsSlot == eSlot2) {
+            next = node.nsNode->getEdgeEnd(eSlot1);
+            nexp = next.eeEdge.lock();
             if (jsw != eSwitchLeft) {
-                if (!node.nsNode->getEdgeEnd(eSlot1).eeEdge->getTrain()) {
+                // Set the junction switch if no train is waiting.
+                if (nexp && !nexp->getTrain()) {
                     node.nsNode->setSwitchPos(eSwitchLeft);
                 }
             }
             else if (advance) {
-                next = node.nsNode->getEdgeEnd(eSlot1);
-                if (next.eeEdge) {
-                    m_edge.eeEdge->setTrain(nullptr);
-                    if (next.eeEdge->getTrain()) {
-                        m_edge.eeEdge = nullptr;
+                if (nexp) {
+                    eptr->setTrain(nullptr);
+                    if (nexp->getTrain()) {
+                        m_edge.eeEdge.reset();
                         throw std::runtime_error("Train collision detected!");
                     }
                     m_edge.eeEdge = next.eeEdge;
                     m_edge.eeEnd = (next.eeEnd == eEndA) ? eEndB : eEndA;
-                    m_edge.eeEdge->setTrain(shared_from_this());
+                    nexp->setTrain(shared_from_this());
                 }
             }
         }
         else if (node.nsSlot == eSlot3) {
+            next = node.nsNode->getEdgeEnd(eSlot1);
+            nexp = next.eeEdge.lock();
             if (jsw != eSwitchRight) {
-                if (!node.nsNode->getEdgeEnd(eSlot1).eeEdge->getTrain() &&
-                    !node.nsNode->getEdgeEnd(eSlot2).eeEdge->getTrain()) {
-                    node.nsNode->setSwitchPos(eSwitchRight);
+                // Set the junction switch if no other train is waiting.
+                if (nexp && !nexp->getTrain()) {
+                    nexp = node.nsNode->getEdgeEnd(eSlot2).eeEdge.lock();
+                    if (nexp && !nexp->getTrain()) {
+                        node.nsNode->setSwitchPos(eSwitchRight);
+                    }
                 }
             }
             else if (advance) {
-                next = node.nsNode->getEdgeEnd(eSlot1);
-                if (next.eeEdge) {
-                    m_edge.eeEdge->setTrain(nullptr);
-                    if (next.eeEdge->getTrain()) {
-                        m_edge.eeEdge = nullptr;
+                if (nexp) {
+                    eptr->setTrain(nullptr);
+                    if (nexp->getTrain()) {
+                        m_edge.eeEdge.reset();
                         throw std::runtime_error("Train collision detected!");
                     }
                     m_edge.eeEdge = next.eeEdge;
                     m_edge.eeEnd = (next.eeEnd == eEndA) ? eEndB : eEndA;
-                    m_edge.eeEdge->setTrain(shared_from_this());
+                    nexp->setTrain(shared_from_this());
                 }
             }
         }
@@ -160,9 +172,10 @@ bool Train::stepSimulation()
 void Train::show()
 {
     std::cout << "Train: " << m_name << std::endl;
-    if (m_edge.eeEdge) {
+    EdgePtr eptr = m_edge.eeEdge.lock();
+    if (eptr) {
         std::cout << "  Location: track segment \""
-                  << m_edge.eeEdge->name() << "\"" << std::endl;
+                  << eptr->name() << "\"" << std::endl;
         std::cout << "  Direction: toward segment end "
                   << ((m_edge.eeEnd == eEndA) ? "A" : "B") << std::endl;
     }
@@ -196,8 +209,8 @@ static std::string getNodeSlotID(NodeSlot node)
 //
 void Train::getOptimalRoute()
 {
-    EdgePtr start = m_edge.eeEdge;
-    EdgePtr end = m_destination;
+    EdgePtr start = m_edge.eeEdge.lock();
+    EdgePtr end = m_destination.lock();
     if (!start || !end) {
         // Missing end(s), no route is possible.
         while (!m_route.empty()) { m_route.pop(); }
@@ -208,6 +221,7 @@ void Train::getOptimalRoute()
     std::set<std::string> visitedSet;
     NodeSlot node;
     EdgeEnd edge;
+    EdgePtr eptr;
 
     // Initialize the BFS search queue with the end nodes of the start edge.
     searchQueue.push(new QNode(nullptr, start->getNode(eEndA)));
@@ -235,10 +249,11 @@ void Train::getOptimalRoute()
         case eSlot1:
             // Both slot 2 and 3 are adjacent (if not null)
             edge = front->node.nsNode->getEdgeEnd(eSlot2);
-            if (edge.eeEdge) {
-                if (edge.eeEdge == end) { found = front; }
+            eptr = edge.eeEdge.lock();
+            if (eptr) {
+                if (eptr == end) { found = front; }
                 else {
-                    node = edge.eeEdge->getAdjacent(edge.eeEnd);
+                    node = eptr->getAdjacent(edge.eeEnd);
                     std::string ID = getNodeSlotID(node);
                     if (visitedSet.find(ID) == visitedSet.end()) {
                         visitedSet.insert(ID);
@@ -249,10 +264,11 @@ void Train::getOptimalRoute()
             if (found) break;
 
             edge = front->node.nsNode->getEdgeEnd(eSlot3);
-            if (edge.eeEdge) {
-                if (edge.eeEdge == end) { found = front; }
+            eptr = edge.eeEdge.lock();
+            if (eptr) {
+                if (eptr == end) { found = front; }
                 else {
-                    node = edge.eeEdge->getAdjacent(edge.eeEnd);
+                    node = eptr->getAdjacent(edge.eeEnd);
                     std::string ID = getNodeSlotID(node);
                     if (visitedSet.find(ID) == visitedSet.end()) {
                         visitedSet.insert(ID);
@@ -266,10 +282,11 @@ void Train::getOptimalRoute()
         case eSlot3:
             // Only slot 1 is adjacent (either continuation, or junction fork).
             edge = front->node.nsNode->getEdgeEnd(eSlot1);
-            if (edge.eeEdge) {
-                if (edge.eeEdge == end) { found = front; }
+            eptr = edge.eeEdge.lock();
+            if (eptr) {
+                if (eptr == end) { found = front; }
                 else {
-                    node = edge.eeEdge->getAdjacent(edge.eeEnd);
+                    node = eptr->getAdjacent(edge.eeEnd);
                     std::string ID = getNodeSlotID(node);
                     if (visitedSet.find(ID) == visitedSet.end()) {
                         visitedSet.insert(ID);
@@ -296,7 +313,8 @@ void Train::getOptimalRoute()
         node = found->node;
         if ((node.nsNode->getNodeType() == eJunction) &&
             (node.nsSlot == eSlot1)) {
-            if (found->node.nsNode->getEdgeEnd(eSlot2).eeEdge == from) {
+            eptr = found->node.nsNode->getEdgeEnd(eSlot2).eeEdge.lock();
+            if (eptr == from) {
                 std::cout << "         -- via junction switch LEFT" << std::endl;
                 m_route.push(eSwitchLeft);
             }
@@ -306,7 +324,7 @@ void Train::getOptimalRoute()
             }
         }
         edge = node.nsNode->getEdgeEnd(node.nsSlot);
-        from = edge.eeEdge;
+        from = edge.eeEdge.lock();
         found = found->parent;
         if (found) { std::cout << "         from edge: " << from->name() << std::endl; }
         else       { std::cout << "Starting from edge: " << from->name() << std::endl; }

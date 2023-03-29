@@ -34,20 +34,13 @@ System::~System()
 void System::resetTrackNetwork()
 {
     // Clear out the existing network.
-    for (auto iter: m_edgeMap) {
-        if (iter.second) { iter.second.reset(); }
-    }
+    std::cout << std::endl << "Removing " << m_edgeMap.size() << " edges...";
     m_edgeMap.clear();
-
-    for (auto iter: m_nodeMap) {
-        if (iter.second) { iter.second.reset(); }
-    }
+    std::cout << std::endl << "Removing " << m_nodeMap.size() << " nodes...";
     m_nodeMap.clear();
-
-    for (auto iter: m_trainMap) {
-        if (iter.second) { iter.second.reset(); }
-    }
+    std::cout << std::endl << "Removing " << m_trainMap.size() << " trains...";
     m_trainMap.clear();
+    std::cout << std::endl;
 }
 
 EdgePtr System::createEdge(const std::string& name)
@@ -135,10 +128,12 @@ TrainPtr System::getTrain(const std::string& name)
 int System::connectSegments(const EdgeEnd& s1, const EdgeEnd& s2)
 {
     // If either track is null, there is nothing more to do.
-    if (!s1.eeEdge || !s2.eeEdge) { return EINVAL; }
+    EdgePtr ept1 = s1.eeEdge.lock();
+    EdgePtr ept2 = s2.eeEdge.lock();
+    if (!ept1 || !ept2) { return EINVAL; }
 
-    NodeSlot cnctNode = s1.eeEdge->getNode(s1.eeEnd);
-    NodeSlot rmovNode = s2.eeEdge->getNode(s2.eeEnd);
+    NodeSlot cnctNode = ept1->getNode(s1.eeEnd);
+    NodeSlot rmovNode = ept2->getNode(s2.eeEnd);
     NodeSlot replNode(nullptr, eNumSlots);
 
     // Return error if the end of the other track is
@@ -157,7 +152,7 @@ int System::connectSegments(const EdgeEnd& s1, const EdgeEnd& s2)
 
         // Replace the other edge's node slot entry.
         replNode = { cnctNode.nsNode, eSlot2 };
-        s2.eeEdge->assignNodeSlot(replNode, s2.eeEnd);
+        ept2->assignNodeSlot(replNode, s2.eeEnd);
         break;
 
     case eContinuation:
@@ -167,7 +162,7 @@ int System::connectSegments(const EdgeEnd& s1, const EdgeEnd& s2)
 
         // Replace the other edge's node slot entry.
         replNode = { cnctNode.nsNode, eSlot3 };
-        s2.eeEdge->assignNodeSlot(replNode, s2.eeEnd);
+        ept2->assignNodeSlot(replNode, s2.eeEnd);
         break;
 
     // Throw exceptions if connection criteria are violated.

@@ -88,6 +88,7 @@ void Edge::show(eEnd showEnd)
     if ((showEnd == eEndA) || (showEnd == eNumEnds)) {
         NodeSlot node = m_ends[eEndA];
         EdgeEnd edge;
+        EdgePtr eptr;
         if (node.nsNode == nullptr) {
             throw std::runtime_error("Edge has null end node");
         }
@@ -98,13 +99,15 @@ void Edge::show(eEnd showEnd)
             break;
         case eContinuation:
             edge = node.nsNode->getNext(node.nsSlot);
-            if (edge.eeEdge) { msg += edge.eeEdge->name() + " <==> "; }
+            eptr = edge.eeEdge.lock();
+            if (eptr) { msg += eptr->name() + " <==> "; }
             // TODO: else: exception?
             break;
 
         case eJunction:
             edge = node.nsNode->getNext(node.nsSlot);
-            if (edge.eeEdge) { msg += edge.eeEdge->name(); }
+            eptr = edge.eeEdge.lock();
+            if (eptr) { msg += eptr->name(); }
             else { msg += "<block>"; }
             sw = node.nsNode->getSwitchPos();
             if (node.nsSlot == eSlot1) {
@@ -140,6 +143,7 @@ void Edge::show(eEnd showEnd)
         }
         NodeSlot node = m_ends[eEndB];
         EdgeEnd edge;
+        EdgePtr eptr;
         if (node.nsNode == nullptr) {
             throw std::runtime_error("Edge has null end node");
         }
@@ -150,7 +154,8 @@ void Edge::show(eEnd showEnd)
             break;
         case eContinuation:
             edge = node.nsNode->getNext(node.nsSlot);
-            if (edge.eeEdge) { msg += " <==> " + edge.eeEdge->name(); }
+            eptr = edge.eeEdge.lock();
+            if (eptr) { msg += " <==> " + eptr->name(); }
             // TODO: else: exception?
             break;
 
@@ -169,7 +174,8 @@ void Edge::show(eEnd showEnd)
                 msg += "=> ";
             }
             edge = node.nsNode->getNext(node.nsSlot);
-            if (edge.eeEdge) { msg += edge.eeEdge->name(); }
+            eptr = edge.eeEdge.lock();
+            if (eptr) { msg += eptr->name(); }
             else { msg += "<block>"; }
             break;
         }

@@ -58,6 +58,7 @@ enum eEnd {
 class Edge;
 class Node;
 class Train;
+using EdgeRef   = std::weak_ptr<Edge>;
 using EdgePtr   = std::shared_ptr<Edge>;
 using NodePtr   = std::shared_ptr<Node>;
 using TrainPtr  = std::shared_ptr<Train>;
@@ -70,7 +71,7 @@ struct NodeSlot {
 };
 
 struct EdgeEnd {
-    EdgePtr eeEdge;
+    EdgeRef eeEdge;
     eEnd    eeEnd;
     EdgeEnd() : eeEdge(), eeEnd(eNumEnds) {}
     EdgeEnd(EdgePtr e, eEnd d) : eeEdge(e), eeEnd(d) {}

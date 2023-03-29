@@ -25,43 +25,46 @@ RRsignal::~RRsignal()
 void RRsignal::updateSignal()
 {
     m_isRed = true; // Assume the signal is red.
+    EdgePtr eptr = m_edge.eeEdge.lock();
 
     // Nothing to do if we aren't placed anywhere.
-    if (m_edge.eeEdge == nullptr) { return; }
+    if (!eptr) { return; }
 
-    NodeSlot node = m_edge.eeEdge->getNode(m_edge.eeEnd);
+    NodeSlot node = eptr->getNode(m_edge.eeEnd);
     EdgeEnd edge = node.nsNode->getNext(node.nsSlot);
+    eptr = edge.eeEdge.lock();
 
     // There is no next track segment, nothing more to do.
-    if (edge.eeEdge == nullptr) { return; }
+    if (!eptr) { return; }
 
     // The next segment has a train, nothing more to do.
-    if (edge.eeEdge->getTrain()) { return; }
-    node = edge.eeEdge->getNode((edge.eeEnd == eEndA) ? eEndB : eEndA);
+    if (eptr->getTrain()) { return; }
+    node = eptr->getNode((edge.eeEnd == eEndA) ? eEndB : eEndA);
 
     // Avoid infinite loops.
     std::set<std::string> visitedEdges;
-    visitedEdges.insert(edge.eeEdge->name());
+    visitedEdges.insert(eptr->name());
 
     // Now assume we have a green light, unless we find an oncoming train.
     m_isRed = false;
 
     while (node.nsNode->getNodeType() != eJunction) {
         edge = node.nsNode->getNext(node.nsSlot);
-        if (edge.eeEdge == nullptr) { return; }
-        if (visitedEdges.find(edge.eeEdge->name()) != visitedEdges.end()) {
+        eptr = edge.eeEdge.lock();
+        if (!eptr) { return; }
+        if (visitedEdges.find(eptr->name()) != visitedEdges.end()) {
             // The track formed a loop before a junction was seen.
             return;
         }
-        visitedEdges.insert(edge.eeEdge->name());
+        visitedEdges.insert(eptr->name());
 
-        TrainPtr train = edge.eeEdge->getTrain();
+        TrainPtr train = eptr->getTrain();
         if (train && (train->getPosition().eeEnd == edge.eeEnd)) {
             // The train is headed toward us.
             m_isRed = true;
             return;
         }
-        node = edge.eeEdge->getNode((edge.eeEnd == eEndA) ? eEndB : eEndA);
+        node = eptr->getNode((edge.eeEnd == eEndA) ? eEndB : eEndA);
     }
 }
 

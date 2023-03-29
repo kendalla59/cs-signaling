@@ -26,9 +26,9 @@ Node::~Node()
 
 eNodeType Node::getNodeType()
 {
-    if (m_slots[eSlot3].eeEdge) { return eJunction; }
-    if (m_slots[eSlot2].eeEdge) { return eContinuation; }
-    if (m_slots[eSlot1].eeEdge) { return eTerminator; }
+    if (m_slots[eSlot3].eeEdge.lock()) { return eJunction; }
+    if (m_slots[eSlot2].eeEdge.lock()) { return eContinuation; }
+    if (m_slots[eSlot1].eeEdge.lock()) { return eTerminator; }
     return eEmpty;
 }
 
@@ -114,7 +114,7 @@ void Node::show()
     nstr << std::setw(12) << std::right << m_name << ':';
 
     for (int ix = 0; ix < eNumSlots; ix++) {
-        eptr = m_slots[ix].eeEdge;
+        eptr = m_slots[ix].eeEdge.lock();
         if (eptr) {
             NodePtr next = eptr->getAdjacent(m_slots[ix].eeEnd).nsNode;
             if (next) {
