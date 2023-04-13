@@ -58,6 +58,7 @@ public:
     int         showEdges();
     int         showNodes();
 
+    void        addSignalsToAllJunctions();
     void        updateAllSignals();
     NodeVec     getAllJunctions();
     int         serialize(std::ofstream& ofstr);

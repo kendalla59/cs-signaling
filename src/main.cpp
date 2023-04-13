@@ -139,6 +139,20 @@ static int cmdPlaceSignal()
     return 0;
 }
 
+static int cmdSignalAllJunctions()
+{
+    try {
+        sys().addSignalsToAllJunctions();
+        sys().updateAllSignals();
+    }
+    catch (std::exception & ex) {
+        std::cout << "ERROR: " << ex.what() << std::endl;
+        return EFAULT;
+    }
+
+    return 0;
+}
+
 static int cmdToggleSwitch()
 {
     rrsim::NodeVec jctv = sys().getAllJunctions();
@@ -315,6 +329,7 @@ int runCommandBuild()
             "5. List track segments"                        << std::endl <<
             "6. Save track network"                         << std::endl <<
             "7. Load track network"                         << std::endl <<
+            "8. Add Signals To All Junctions"               << std::endl <<
             "R/return"                                      << std::endl;
 
     std::string resp;
@@ -362,6 +377,11 @@ int runCommandBuild()
     case 7:
         std::cout << "---------------- Load Track Network ----------------" << std::endl;
         rc = cmdLoadNetwork();
+        std::cout << "----------------------------------------------------" << std::endl;
+        break;
+    case 8:
+        std::cout << "---------- Place Signals On All Junctions ----------" << std::endl;
+        rc = cmdSignalAllJunctions();
         std::cout << "----------------------------------------------------" << std::endl;
         break;
     default:

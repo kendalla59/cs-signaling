@@ -228,6 +228,29 @@ int System::showNodes()
     return 0;
 }
 
+void System::addSignalsToAllJunctions()
+{
+    for (auto iter: m_edgeMap) {
+        EdgePtr eptr = iter.second;
+        if (eptr) {
+            for (int ix = 0; ix < eNumEnds; ix++) {
+                eEnd ex = (eEnd)ix;
+                if (!eptr->getSignal(ex)) {
+                    NodeSlot node = eptr->getNode(ex);
+                    if (node.nsNode &&
+                            (node.nsNode->getNodeType() == eJunction)) {
+
+                        eptr->placeSignalLight(ex);
+                        std::cout << "Added signal to " << eptr->name()
+                                  << ((ex == eEndA) ? "[A]" : "[B]")
+                                  << std::endl;
+                    }
+                }
+            }
+        }
+    }
+}
+
 void System::updateAllSignals()
 {
     for (auto iter: m_edgeMap) {

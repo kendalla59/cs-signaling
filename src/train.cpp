@@ -97,8 +97,15 @@ bool Train::stepSimulation()
     case eJunction:
         jsw = node.nsNode->getSwitchPos();
         if (node.nsSlot == eSlot1) {
+            if (m_route.empty()) { std::cout << "No route for " << eptr->name() << std::endl; }
+            else { std::cout << "Route wants " << ((m_route.top() == eSwitchLeft) ? "left" : "right")
+                             << ", switch is " << ((jsw == eSwitchLeft) ? "left" : "right") << std::endl; }
             if (!m_route.empty() && (m_route.top() != jsw)) {
                 node.nsNode->setSwitchPos(m_route.top());
+                std::cout << "Switch " << eptr->name() << "->"
+                          << node.nsNode->name() << " set to "
+                          << ((jsw == eSwitchRight) ? "right" : "left")
+                          << std::endl;
             }
             else if (advance) {
                 next = node.nsNode->getEdgeEnd(
@@ -113,7 +120,7 @@ bool Train::stepSimulation()
                     m_edge.eeEdge = next.eeEdge;
                     m_edge.eeEnd = (next.eeEnd == eEndA) ? eEndB : eEndA;
                     nexp->setTrain(shared_from_this());
-                    m_route.pop();
+                    if (!m_route.empty()) { m_route.pop(); }
                 }
             }
         }
@@ -124,6 +131,9 @@ bool Train::stepSimulation()
                 // Set the junction switch if no train is waiting.
                 if (nexp && !nexp->getTrain()) {
                     node.nsNode->setSwitchPos(eSwitchLeft);
+                    std::cout << "Switch " << eptr->name() << "->"
+                              << node.nsNode->name() << " set to left"
+                              << std::endl;
                 }
             }
             else if (advance) {
@@ -148,6 +158,9 @@ bool Train::stepSimulation()
                     nexp = node.nsNode->getEdgeEnd(eSlot2).eeEdge.lock();
                     if (nexp && !nexp->getTrain()) {
                         node.nsNode->setSwitchPos(eSwitchRight);
+                        std::cout << "Switch " << eptr->name() << "->"
+                                  << node.nsNode->name() << " set to left"
+                                  << std::endl;
                     }
                 }
             }
