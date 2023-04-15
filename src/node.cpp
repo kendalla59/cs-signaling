@@ -50,13 +50,38 @@ void Node::makeContinuation(const EdgeEnd& track)
     m_slots[eSlot2] = track;
 }
 
-void Node::makeJunction(const EdgeEnd& track)
+void Node::makeJunction(const EdgeEnd& track, eSlot slot)
 {
     if (getNodeType() != eContinuation) {
         throw std::runtime_error(
                 "Attempt to makeJunction, but node is not a continuation");
     }
-    m_slots[eSlot3] = track;
+    // Swap slot 1 and 2 if the common edge is on slot 2.
+    // NOTE: The NodeSlot for the Edge and the EdgeEnd for Node must
+    //       both be updated, or the network will become corrupted.
+    if (slot == eSlot2) {
+        EdgePtr eptr;
+        NodeSlot ns;
+        EdgeEnd e1 = getEdgeEnd(eSlot1);
+        EdgeEnd e2 = getEdgeEnd(eSlot2);
+
+        eptr = e1.eeEdge.lock();
+        if (!eptr) { throw std::runtime_error("Slot1 edge is null"); }
+        ns = eptr->getNode(e1.eeEnd);
+        if (ns.nsSlot != eSlot1) { throw std::runtime_error("Assert slot1"); }
+        ns.nsSlot = eSlot2;
+        eptr->assignNodeSlot(ns, e1.eeEnd);
+        setEdgeEnd(e1, eSlot2);
+
+        eptr = e2.eeEdge.lock();
+        if (!eptr) { throw std::runtime_error("Slot2 edge is null"); }
+        ns = eptr->getNode(e2.eeEnd);
+        if (ns.nsSlot != eSlot2) { throw std::runtime_error("Assert slot2"); }
+        ns.nsSlot = eSlot1;
+        eptr->assignNodeSlot(ns, e2.eeEnd);
+        setEdgeEnd(e2, eSlot1);
+    }
+    setEdgeEnd(track, eSlot3);
     m_switchState = eSwitchLeft;
 }
 

@@ -158,7 +158,7 @@ int System::connectSegments(const EdgeEnd& s1, const EdgeEnd& s2)
     case eContinuation:
         // This connection results in a junction from this track to the
         // currently connected track (left) or to the new track (right).
-        cnctNode.nsNode->makeJunction(s2);
+        cnctNode.nsNode->makeJunction(s2, cnctNode.nsSlot);
 
         // Replace the other edge's node slot entry.
         replNode = { cnctNode.nsNode, eSlot3 };
@@ -323,82 +323,6 @@ int System::deserialize(std::ifstream& ifstr)
     }
     return 0;
 }
-
-/*
-static int cmdShowConnections()
-{
-    try {
-        for (auto it: g_nodeMap) {
-            it.second->show();
-        }
-    }
-    catch (std::exception& ex) {
-        std::cout << "ERROR: " << ex.what() << std::endl;
-        return EFAULT;
-    }
-    return 0;
-}
-
-static int cmdPlaceTrain()
-{
-    std::cout << "Starting - ";
-    std::string resp1 = enterName();
-    if (resp1.empty()) { return 0; }
-    auto iter1 = g_edgeMap.find(resp1);
-    if (iter1 == g_edgeMap.end()) {
-        resp1 = nameFromNumber(resp1);
-        iter1 = g_edgeMap.find(resp1);
-        if (iter1 == g_edgeMap.end()) {
-            std::cout << "No such segment \"" << resp1 << "\"" << std::endl;
-            return EINVAL;
-        }
-    }
-    std::cout << "Ending - ";
-    std::string resp2 = enterName();
-    if (resp2.empty()) { return 0; }
-    auto iter2 = g_edgeMap.find(resp2);
-    if (iter2 == g_edgeMap.end()) {
-        resp2 = nameFromNumber(resp2);
-        iter2 = g_edgeMap.find(resp2);
-        if (iter2 == g_edgeMap.end()) {
-            std::cout << "No such segment \"" << resp2 << "\"" << std::endl;
-            return EINVAL;
-        }
-    }
-
-    try {
-        rrsim::EdgeEnd edge = g_train.getPosition();
-        if (edge.eeEdge) { edge.eeEdge->setTrain(nullptr); }
-        g_train.placeOnTrack(iter1->second, iter2->second);
-        rrsim::RRsignal::updateAllSignals();
-        g_train.show();
-    }
-    catch (std::exception& ex) {
-        std::cout << "ERROR: " << ex.what() << std::endl;
-        return EFAULT;
-    }
-
-    return 0;
-}
-
-static int cmdStepSimulation()
-{
-    try {
-        bool chk = g_train.stepSimulation();
-        rrsim::RRsignal::updateAllSignals();
-        g_train.show();
-        if (!chk) {
-            std::cout << ">>> The Simulation Is Complete <<<" << std::endl;
-        }
-    }
-    catch (std::exception& ex) {
-        std::cout << "ERROR: " << ex.what() << std::endl;
-        return EFAULT;
-    }
-
-    return 0;
-}
-*/
 
 std::string System::getUniqueEdgeName()
 {

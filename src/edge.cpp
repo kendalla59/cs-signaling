@@ -89,6 +89,7 @@ void Edge::show(eEnd showEnd)
         NodeSlot node = m_ends[eEndA];
         EdgeEnd edge;
         EdgePtr eptr;
+        eSlot slot;
         if (node.nsNode == nullptr) {
             throw std::runtime_error("Edge has null end node");
         }
@@ -105,22 +106,31 @@ void Edge::show(eEnd showEnd)
             break;
 
         case eJunction:
-            edge = node.nsNode->getNext(node.nsSlot);
-            eptr = edge.eeEdge.lock();
-            if (eptr) { msg += eptr->name(); }
-            else { msg += "<block>"; }
             sw = node.nsNode->getSwitchPos();
+            slot = (sw == eSwitchRight) ? eSlot3 : eSlot2;
             if (node.nsSlot == eSlot1) {
-                if      (sw == eSwitchNone)  { msg += " XX"; }
-                else if (sw == eSwitchLeft)  { msg += " //"; }
-                else                         { msg += " \\\\"; }
+                edge = node.nsNode->getEdgeEnd(slot);
+                eptr = edge.eeEdge.lock();
+                if (eptr)                   { msg += eptr->name(); }
+                else                        { msg += "<empty>"; }
+
+                if      (sw == eSwitchNone) { msg += " XX"; }
+                else if (sw == eSwitchLeft) { msg += " //"; }
+                else                        { msg += " \\\\"; }
                 msg += "=> ";
             }
             else {
-                msg += " <=";
-                if      (sw == eSwitchNone)  { msg += "XX "; }
-                else if (sw == eSwitchLeft)  { msg += "// "; }
-                else                         { msg += "\\\\ "; }
+                edge = node.nsNode->getEdgeEnd(eSlot1);
+                eptr = edge.eeEdge.lock();
+                if (eptr)                   { msg += eptr->name(); }
+                else                        { msg += "<empty>"; }
+
+                if (slot == node.nsSlot)    { msg += " <="; }
+                else                        { msg += " X="; }
+
+                if      (sw == eSwitchNone) { msg += "XX "; }
+                else if (sw == eSwitchLeft) { msg += "// "; }
+                else                        { msg += "\\\\ "; }
             }
             break;
         }
@@ -144,6 +154,7 @@ void Edge::show(eEnd showEnd)
         NodeSlot node = m_ends[eEndB];
         EdgeEnd edge;
         EdgePtr eptr;
+        eSlot slot;
         if (node.nsNode == nullptr) {
             throw std::runtime_error("Edge has null end node");
         }
@@ -161,32 +172,42 @@ void Edge::show(eEnd showEnd)
 
         case eJunction:
             sw = node.nsNode->getSwitchPos();
+            slot = (sw == eSwitchRight) ? eSlot3 : eSlot2;
             if (node.nsSlot == eSlot1) {
                 msg += " <=";
                 if      (sw == eSwitchNone)  { msg += "XX "; }
                 else if (sw == eSwitchLeft)  { msg += "// "; }
                 else                         { msg += "\\\\ "; }
+
+                edge = node.nsNode->getEdgeEnd(slot);
+                eptr = edge.eeEdge.lock();
+                if (eptr) { msg += eptr->name(); }
+                else { msg += "<empty>"; }
             }
             else {
                 if      (sw == eSwitchNone)  { msg += " XX"; }
                 else if (sw == eSwitchLeft)  { msg += " //"; }
                 else                         { msg += " \\\\"; }
-                msg += "=> ";
+
+                if (slot == node.nsSlot)    { msg += "=> "; }
+                else                        { msg += "=X "; }
+
+                edge = node.nsNode->getEdgeEnd(eSlot1);
+                eptr = edge.eeEdge.lock();
+                if (eptr) { msg += eptr->name(); }
+                else { msg += "<empty>"; }
             }
-            edge = node.nsNode->getNext(node.nsSlot);
-            eptr = edge.eeEdge.lock();
-            if (eptr) { msg += eptr->name(); }
-            else { msg += "<block>"; }
             break;
         }
     }
     if (m_train) {
         if (m_train->getPosition().eeEnd == eEndA) {
-            msg += "  /[o==o]-[o==o]";
+            msg += "  /[o==o]-[o==o] ";
         }
         else {
-            msg += "  [o==o]-[o==o]\\";
+            msg += "  [o==o]-[o==o]\\ ";
         }
+        msg += m_train->name();
     }
     std::cout << msg << std::endl;
 }

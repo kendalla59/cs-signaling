@@ -49,10 +49,12 @@ public:
     void makeContinuation(const EdgeEnd& track);
 
     // Make this node a junction by setting the EdgeEnd into the third slot.
-    // The first slot holds the common track, the second slot holds the left
-    // fork of the junction, and the third slot holds the right fork. This
-    // assumes the node is currently a continuation.
-    void makeJunction(const EdgeEnd& track);
+    // The given slot (must be eSlot1 or eSlot2) becomes the common track
+    // using the first slot, eSlot1. The second slot (eSlot2) holds the left
+    // fork of the junction (previously the continuation track), and the third
+    // slot holds the right fork (the given track). This assumes the node is
+    // currently a continuation.
+    void makeJunction(const EdgeEnd& track, eSlot slot);
 
     // Set the EdgeEnd directly into a slot (used for deserialization).
     void setEdgeEnd(const EdgeEnd& track, eSlot slot);
