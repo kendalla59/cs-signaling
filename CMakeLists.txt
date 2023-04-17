@@ -18,6 +18,8 @@ set (SRC src/main.cpp
 # This project will output an executable file
 add_executable(${PROJECT_NAME} ${SRC})
 
+target_link_libraries(cs_signaling pthread)
+
 # Create a simple configuration header
 configure_file(config.h.in config.h)
 

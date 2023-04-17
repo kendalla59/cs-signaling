@@ -201,29 +201,51 @@ int System::stepSimulation()
 
 int System::runSimulation()
 {
-    try {
-        showEdges();
-        bool running = true;
-        while (running) {
-            running = false;
-            for (auto iter: m_trainMap) {
-                TrainPtr tptr = iter.second;
-                bool moresteps = tptr->stepSimulation();
-                if (moresteps) { running = true; }
-                updateAllSignals();
+    bool haltNow = false;
+    auto simLoop = [&]() {
+        try {
+            int elapsed = 0;
+            bool running = true;
+            while (running && !haltNow) {
+                running = false;
+                for (auto iter: m_trainMap) {
+                    TrainPtr tptr = iter.second;
+                    bool moresteps = tptr->stepSimulation();
+                    if (moresteps) { running = true; }
+                    updateAllSignals();
+                }
+                // Move up n lines, where n is the number of edges plus three.
+                std::cout << "\x1B[" << (m_edgeMap.size() + 3) << "A";
+                std::cout << "\x1B[G\x1B[0J"; // clear all lines below cursor.
+                showEdges();
+                std::cout << "Simulation step: " << ++elapsed << std::endl;
+                std::cout << "Press ENTER to halt simulation: " << std::flush;
+                for (int ix = 0; ix < 2000; ix += 100) {
+                    if (!haltNow) {
+                        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                    }
+                }
             }
-            // Move up n lines, where n is the number of edges plus two.
-            std::cout << "\x1B[" << (m_edgeMap.size() + 2) << "A";
-            std::cout << "\x1B[0J"; // clear all lines below cursor.
-            showEdges();
-            std::cout << std::flush;
-            std::this_thread::sleep_for(std::chrono::seconds(2));
         }
-    }
-    catch (std::exception& ex) {
-        std::cout << "ERROR: " << ex.what() << std::endl;
-        return EFAULT;
-    }
+        catch (std::exception& ex) {
+            std::cout << "ERROR: " << ex.what() << std::endl;
+        }
+        if (!haltNow) {
+            std::cout << std::endl << std::endl << "Simulation COMPLETE";
+            std::cout << std::endl << "Press ENTER to continue: " << std::flush;
+        }
+    };
+
+    showEdges();
+    std::cout << "Simulation step: 0" << std::endl;
+    std::cout << "Press ENTER to halt simulation: " << std::flush;
+
+    std::thread tsim(simLoop);
+    std::string resp;
+    std::getline(std::cin, resp);
+    haltNow = true;
+    if (tsim.joinable()) { tsim.join(); }
+
     return 0;
 }
 
