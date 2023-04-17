@@ -57,8 +57,8 @@ void Node::makeJunction(const EdgeEnd& track, eSlot slot)
                 "Attempt to makeJunction, but node is not a continuation");
     }
     // Swap slot 1 and 2 if the common edge is on slot 2.
-    // NOTE: The NodeSlot for the Edge and the EdgeEnd for Node must
-    //       both be updated, or the network will become corrupted.
+    // NOTE: The NodeSlot for the Edge, and the EdgeEnd for the Node
+    //       must both be updated, or the network will become corrupted.
     if (slot == eSlot2) {
         EdgePtr eptr;
         NodeSlot ns;

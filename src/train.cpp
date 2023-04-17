@@ -97,15 +97,19 @@ bool Train::stepSimulation()
     case eJunction:
         jsw = node.nsNode->getSwitchPos();
         if (node.nsSlot == eSlot1) {
+#ifdef SHOW_JUNCTION
             if (m_route.empty()) { std::cout << "No route for " << eptr->name() << std::endl; }
             else { std::cout << "Route wants " << ((m_route.top() == eSwitchLeft) ? "left" : "right")
                              << ", switch is " << ((jsw == eSwitchLeft) ? "left" : "right") << std::endl; }
+#endif
             if (!m_route.empty() && (m_route.top() != jsw)) {
                 node.nsNode->setSwitchPos(m_route.top());
+#ifdef SHOW_JUNCTION
                 std::cout << "Switch " << eptr->name() << "->"
                           << node.nsNode->name() << " set to "
                           << ((jsw == eSwitchRight) ? "right" : "left")
                           << std::endl;
+#endif
             }
             else if (advance) {
                 next = node.nsNode->getEdgeEnd(
@@ -131,9 +135,11 @@ bool Train::stepSimulation()
                 // Set the junction switch if no train is waiting.
                 if (nexp && !nexp->getTrain()) {
                     node.nsNode->setSwitchPos(eSwitchLeft);
+#ifdef SHOW_JUNCTION
                     std::cout << "Switch " << eptr->name() << "->"
                               << node.nsNode->name() << " set to left"
                               << std::endl;
+#endif
                 }
             }
             else if (advance) {
@@ -158,9 +164,11 @@ bool Train::stepSimulation()
                     nexp = node.nsNode->getEdgeEnd(eSlot2).eeEdge.lock();
                     if (nexp && !nexp->getTrain()) {
                         node.nsNode->setSwitchPos(eSwitchRight);
+#ifdef SHOW_JUNCTION
                         std::cout << "Switch " << eptr->name() << "->"
                                   << node.nsNode->name() << " set to left"
                                   << std::endl;
+#endif
                     }
                 }
             }

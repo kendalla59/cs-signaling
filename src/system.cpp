@@ -12,6 +12,8 @@
 #include <iostream>
 #include <sstream>
 #include <iomanip>
+#include <chrono>
+#include <thread>
 
 namespace rrsim {
 
@@ -188,6 +190,34 @@ int System::stepSimulation()
                 std::cout << ">>> The Simulation Is Complete : "
                           << tptr->name() << " <<<" << std::endl;
             }
+        }
+    }
+    catch (std::exception& ex) {
+        std::cout << "ERROR: " << ex.what() << std::endl;
+        return EFAULT;
+    }
+    return 0;
+}
+
+int System::runSimulation()
+{
+    try {
+        showEdges();
+        bool running = true;
+        while (running) {
+            running = false;
+            for (auto iter: m_trainMap) {
+                TrainPtr tptr = iter.second;
+                bool moresteps = tptr->stepSimulation();
+                if (moresteps) { running = true; }
+                updateAllSignals();
+            }
+            // Move up n lines, where n is the number of edges plus two.
+            std::cout << "\x1B[" << (m_edgeMap.size() + 2) << "A";
+            std::cout << "\x1B[0J"; // clear all lines below cursor.
+            showEdges();
+            std::cout << std::flush;
+            std::this_thread::sleep_for(std::chrono::seconds(2));
         }
     }
     catch (std::exception& ex) {

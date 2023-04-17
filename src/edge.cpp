@@ -202,10 +202,10 @@ void Edge::show(eEnd showEnd)
     }
     if (m_train) {
         if (m_train->getPosition().eeEnd == eEndA) {
-            msg += "  /[o==o]-[o==o] ";
+            msg += "  /[o==o]-[o==o]  ";
         }
         else {
-            msg += "  [o==o]-[o==o]\\ ";
+            msg += "   [o==o]-[o==o]\\ ";
         }
         msg += m_train->name();
     }

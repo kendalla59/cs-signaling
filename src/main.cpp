@@ -262,6 +262,11 @@ static int cmdStepSimulation()
     return sys().stepSimulation();
 }
 
+static int cmdRunSimulation()
+{
+    return sys().runSimulation();
+}
+
 static int cmdSaveNetwork()
 {
     std::string path;
@@ -405,6 +410,7 @@ int runCommand()
             "3. Show track connections"                     << std::endl <<
             "4. Place train on a track segment"             << std::endl <<
             "5. [S]tep the train simulation"                << std::endl <<
+            "6. [R]un the train simulation"                 << std::endl <<
             "Q/quit/exit"                                   << std::endl;
 
     std::string resp;
@@ -416,7 +422,8 @@ int runCommand()
         return 1;
     }
     int cmd;
-    if (resp == "S" || resp == "s") { cmd = 5; } // Special case for "step".
+    if (resp == "S" || resp == "s") { cmd = 5; }        // Special case for "step".
+    else if (resp == "R" || resp == "r") { cmd = 6; }   // Special case for "run".
     else { try { cmd = std::stoi(resp); } catch (...) { cmd = 0; } }
 
     switch (cmd) {
@@ -444,6 +451,11 @@ int runCommand()
     case 5:
         std::cout << "----------------- Step Simulation ------------------" << std::endl;
         rc = cmdStepSimulation();
+        std::cout << "----------------------------------------------------" << std::endl;
+        break;
+    case 6:
+        std::cout << "------------------ Run Simulation ------------------" << std::endl;
+        rc = cmdRunSimulation();
         std::cout << "----------------------------------------------------" << std::endl;
         break;
     default:

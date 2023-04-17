@@ -55,6 +55,7 @@ public:
 
     int         connectSegments(const EdgeEnd& s1, const EdgeEnd& s2);
     int         stepSimulation();
+    int         runSimulation();
     int         showEdges();
     int         showNodes();
 
