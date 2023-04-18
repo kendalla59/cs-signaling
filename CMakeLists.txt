@@ -5,7 +5,7 @@ project (cs_signaling
 	VERSION 0.1
 	DESCRIPTION "Railroad signaling case study")
 
-set (CMAKE_BUILD_TYPE Debug)
+find_package(Threads REQUIRED)
 
 include_directories(include)
 set (SRC src/main.cpp
@@ -18,7 +18,7 @@ set (SRC src/main.cpp
 # This project will output an executable file
 add_executable(${PROJECT_NAME} ${SRC})
 
-target_link_libraries(cs_signaling pthread)
+target_link_libraries(cs_signaling Threads::Threads)
 
 # Create a simple configuration header
 configure_file(config.h.in config.h)

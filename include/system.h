@@ -39,7 +39,7 @@ public:
     static const std::string emptyStr;
 
     void        resetTrackNetwork();
-    int         edgeCount() { return m_edgeMap.size(); }
+    int         edgeCount() { return (int)m_edgeMap.size(); }
 
     EdgePtr     createEdge(const std::string& name = emptyStr);
     EdgePtr     getEdge(const std::string& name);
