@@ -26,6 +26,9 @@
 *.a
 *.lib
 
+# Visual Studio files
+/.vs/
+
 # Executables
 *.exe
 *.out
