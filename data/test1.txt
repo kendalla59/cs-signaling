@@ -1,0 +1,11 @@
+track: tseg001,1,node021,1,node002,0,sigA:Y,sigB:N
+track: tseg002,1,node002,1,node004,0,sigA:N,sigB:N
+track: tseg003,1,node004,1,node006,0,sigA:N,sigB:Y
+track: tseg004,1,node006,1,node008,0,sigA:Y,sigB:N
+track: tseg005,1,node006,2,node010,0,sigA:Y,sigB:N
+track: tseg006,1,node008,1,node012,1,sigA:N,sigB:Y
+track: tseg007,1,node012,0,node014,0,sigA:Y,sigB:N
+track: tseg008,1,node014,1,node016,0,sigA:N,sigB:N
+track: tseg009,1,node017,0,node012,2,sigA:N,sigB:Y
+track: tseg010,1,node019,0,node017,1,sigA:N,sigB:N
+track: tseg011,1,node021,0,node019,1,sigA:Y,sigB:N
